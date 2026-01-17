@@ -73,6 +73,11 @@ npm run typecheck        # Run TypeScript compiler check
 - Commit often with small, focused changes
 - Never force push to main
 
+## Testing Approach
+- Test business logic in hooks/utils
+- Focus on behavior, not implementation details
+- Don't over-test - prioritize critical paths
+
 ## Session Continuity
 When resuming work after a break:
 1. Run `git status` to see uncommitted changes
@@ -97,6 +102,12 @@ interface Todo {
 - Test on web first (fastest feedback), then verify on mobile
 - Accessibility: use proper aria labels and semantic elements
 
+## Constraints
+- NO external state management libraries until local state proves insufficient
+- NO over-abstraction - premature DRY is the root of complexity
+- NO network features yet - keep it local-first for now
+- Keep dependencies minimal - justify each addition
+
 ## Immediate Priorities
 1. Initialize Expo project with TypeScript template
 2. Set up NativeWind v4
@@ -113,3 +124,9 @@ interface Todo {
 - This is a learning project - explain patterns and decisions as we build
 - Prefer simplicity over premature optimization
 - Cross-platform: always consider if a solution works on all 3 platforms
+
+## Learning Focus Areas
+When implementing features, explain:
+- Why this pattern over alternatives
+- What problems this structure prevents
+- How this connects to broader React/React Native concepts
