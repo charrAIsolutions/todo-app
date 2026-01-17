@@ -116,9 +116,9 @@ interface Todo {
 5. Polish UI/UX
 
 ## Current State
-- **Done**: (none yet)
-- **In Progress**: Initial project setup
-- **Next**: Initialize Expo project with TypeScript template
+- **Done**: Expo SDK 54 initialized with TypeScript, project structure created, Todo types/context/hooks scaffolded
+- **In Progress**: (none)
+- **Next**: Set up NativeWind v4 for styling
 
 ## Notes
 - This is a learning project - explain patterns and decisions as we build
