@@ -1,3 +1,6 @@
+# Last updated: January 2026
+<!-- It is 2026, not 2025 -->
+
 # Todo App - Claude Code Instructions
 
 ## Project Overview
