@@ -193,26 +193,26 @@ interface Task {
 
 - ⏳ `app/list-settings/[id].tsx` - List settings modal (rename list, manage categories)
 
+### Phase 3: Categories ✓
+
+- `components/TaskItem.tsx` - Task row with checkbox and indentation support
+- `components/CategoryHeader.tsx` - Bold header with background and task count
+- `components/CategorySection.tsx` - Groups header + tasks for a category
+- Updated `app/(tabs)/index.tsx` to display tasks grouped by category
+
+**Working:**
+
+- ✅ Categories display as bold uppercase headers with distinct background
+- ✅ Tasks appear under their assigned category
+- ✅ Uncategorized tasks appear at bottom with dashed border
+- ✅ Tasks slightly indented from category headers
+- ✅ Subtasks render with deeper indentation
+
+**Remaining:**
+
+- ⏳ Category CRUD in list settings (deferred to list-settings modal)
+
 ## Phases
-
-### Phase 3: Categories
-
-**Goal:** Tasks grouped under category headers
-
-**Files to create:**
-
-- `components/CategorySection.tsx` - Header + tasks for one category
-- `components/CategoryHeader.tsx` - Bold, colored header
-- `components/TaskItem.tsx` - Task row with checkbox
-- `components/UncategorizedSection.tsx` - Bottom section
-
-**Acceptance Criteria:**
-
-- [ ] Categories display as bold headers with distinct background
-- [ ] Tasks appear under their assigned category
-- [ ] Uncategorized tasks appear at bottom
-- [ ] Tasks slightly indented from category headers
-- [ ] Can add/edit/delete categories in list settings
 
 ### Phase 4: Task Detail & Subtasks
 
