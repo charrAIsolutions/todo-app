@@ -8,22 +8,23 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
 } from "react-native";
 import { useAppData } from "@/hooks/useAppData";
 import { ListTabBar } from "@/components/ListTabBar";
 import { AddTaskInput } from "@/components/AddTaskInput";
+import { CategorySection } from "@/components/CategorySection";
 
 /**
  * Main todo list screen.
- * Shows list tabs at top, tasks in middle, add input at bottom.
+ * Shows list tabs at top, tasks grouped by category in middle, add input at bottom.
  */
 export default function TodoScreen() {
   const {
     lists,
-    tasks,
     activeListId,
     activeList,
+    tasksByCategory,
+    subtasksByParent,
     isLoading,
     setActiveList,
     addList,
@@ -33,11 +34,6 @@ export default function TodoScreen() {
 
   const [isCreatingList, setIsCreatingList] = useState(false);
   const [newListName, setNewListName] = useState("");
-
-  // Get tasks for active list (top-level only for now)
-  const activeTasks = tasks.filter(
-    (t) => t.listId === activeListId && t.parentTaskId === null,
-  );
 
   const handleAddList = () => {
     setIsCreatingList(true);
@@ -52,11 +48,6 @@ export default function TodoScreen() {
     }
   };
 
-  const handleCancelCreateList = () => {
-    setNewListName("");
-    setIsCreatingList(false);
-  };
-
   const handleAddTask = (title: string) => {
     if (activeListId) {
       addTask({ title, listId: activeListId });
@@ -64,8 +55,13 @@ export default function TodoScreen() {
   };
 
   const handleOpenListSettings = (listId: string) => {
-    // TODO: Navigate to list settings modal (Phase 2 completion)
+    // TODO: Navigate to list settings modal
     Alert.alert("List Settings", "Long-press detected. Settings coming soon!");
+  };
+
+  const handlePressTask = (taskId: string) => {
+    // TODO: Navigate to task detail modal (Phase 4)
+    Alert.alert("Task Detail", "Tap detected. Detail view coming soon!");
   };
 
   if (isLoading) {
@@ -75,6 +71,15 @@ export default function TodoScreen() {
       </View>
     );
   }
+
+  // Get categories for active list, sorted by sortOrder
+  const categories = activeList?.categories
+    ? [...activeList.categories].sort((a, b) => a.sortOrder - b.sortOrder)
+    : [];
+
+  // Check if there are any tasks at all
+  const hasAnyTasks = tasksByCategory.size > 0;
+  const uncategorizedTasks = tasksByCategory.get(null) ?? [];
 
   return (
     <KeyboardAvoidingView
@@ -115,7 +120,7 @@ export default function TodoScreen() {
       >
         {activeList ? (
           <>
-            {activeTasks.length === 0 ? (
+            {!hasAnyTasks ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateText}>No tasks yet</Text>
                 <Text style={styles.emptyStateHint}>
@@ -123,30 +128,33 @@ export default function TodoScreen() {
                 </Text>
               </View>
             ) : (
-              activeTasks.map((task) => (
-                <Pressable
-                  key={task.id}
-                  style={styles.taskItem}
-                  onPress={() => toggleTask(task.id)}
-                >
-                  <View
-                    style={[
-                      styles.checkbox,
-                      task.completed && styles.checkboxChecked,
-                    ]}
-                  >
-                    {task.completed && <Text style={styles.checkmark}>✓</Text>}
-                  </View>
-                  <Text
-                    style={[
-                      styles.taskTitle,
-                      task.completed && styles.taskTitleCompleted,
-                    ]}
-                  >
-                    {task.title}
-                  </Text>
-                </Pressable>
-              ))
+              <>
+                {/* Render each category section */}
+                {categories.map((category) => {
+                  const categoryTasks = tasksByCategory.get(category.id) ?? [];
+                  return (
+                    <CategorySection
+                      key={category.id}
+                      category={category}
+                      tasks={categoryTasks}
+                      subtasksByParent={subtasksByParent}
+                      onToggleTask={toggleTask}
+                      onPressTask={handlePressTask}
+                    />
+                  );
+                })}
+
+                {/* Uncategorized section at bottom */}
+                {uncategorizedTasks.length > 0 && (
+                  <CategorySection
+                    category={null}
+                    tasks={uncategorizedTasks}
+                    subtasksByParent={subtasksByParent}
+                    onToggleTask={toggleTask}
+                    onPressTask={handlePressTask}
+                  />
+                )}
+              </>
             )}
           </>
         ) : (
@@ -205,6 +213,7 @@ const styles = StyleSheet.create({
   },
   taskListContent: {
     padding: 16,
+    paddingTop: 0,
   },
   emptyState: {
     flex: 1,
@@ -221,41 +230,5 @@ const styles = StyleSheet.create({
   emptyStateHint: {
     fontSize: 14,
     color: "#666",
-  },
-  taskItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#ccc",
-    marginRight: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxChecked: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
-  },
-  checkmark: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  taskTitle: {
-    flex: 1,
-    fontSize: 16,
-    color: "#333",
-  },
-  taskTitleCompleted: {
-    color: "#999",
-    textDecorationLine: "line-through",
   },
 });
