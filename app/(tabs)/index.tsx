@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { useAppData } from "@/hooks/useAppData";
 import { ListTabBar } from "@/components/ListTabBar";
 import { AddTaskInput } from "@/components/AddTaskInput";
@@ -19,6 +20,7 @@ import { CategorySection } from "@/components/CategorySection";
  * Shows list tabs at top, tasks grouped by category in middle, add input at bottom.
  */
 export default function TodoScreen() {
+  const router = useRouter();
   const {
     lists,
     activeListId,
@@ -60,8 +62,7 @@ export default function TodoScreen() {
   };
 
   const handlePressTask = (taskId: string) => {
-    // TODO: Navigate to task detail modal (Phase 4)
-    Alert.alert("Task Detail", "Tap detected. Detail view coming soon!");
+    router.push(`/task/${taskId}`);
   };
 
   if (isLoading) {

@@ -122,12 +122,19 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, activeListId: action.payload };
 
     case "ADD_LIST": {
-      const { name, categories = [] } = action.payload;
+      const { name, categories } = action.payload;
+      // Default categories if none provided
+      const defaultCategories = [
+        { name: "Now" },
+        { name: "Next" },
+        { name: "Later" },
+      ];
+      const categoriesToUse = categories ?? defaultCategories;
       const newList: TodoList = {
         id: generateId(),
         name,
         sortOrder: state.lists.length,
-        categories: categories.map((cat, index) => ({
+        categories: categoriesToUse.map((cat, index) => ({
           id: generateId(),
           name: cat.name,
           sortOrder: index,
