@@ -173,25 +173,27 @@ interface Task {
 - `app/_layout.tsx` - Wrapped with AppProvider
 - Default "General" list with Now/Next/Later categories on first launch
 
-## Phases
-
-### Phase 2: Multi-List Tabs
-
-**Goal:** Create and switch between lists
-
-**Files to create:**
+### Phase 2: Multi-List Tabs ✓ (partial)
 
 - `components/ListTabBar.tsx` - Horizontal scrollable tabs
 - `components/ListTab.tsx` - Individual tab button
-- `app/list-settings/[id].tsx` - List settings modal
+- `components/AddTaskInput.tsx` - Input for adding new tasks
+- `app/(tabs)/index.tsx` - Main todo screen with list tabs, task list, add input
+- Updated tab layout: renamed to "Tasks" with list icon
 
-**Acceptance Criteria:**
+**Working:**
 
-- [ ] Tabs display at top showing all lists
-- [ ] Tapping a tab switches the active list
-- [ ] "+" button creates a new list
-- [ ] Long-press or settings icon opens list settings
-- [ ] Can rename a list
+- ✅ Tabs display at top showing all lists
+- ✅ Tapping a tab switches the active list
+- ✅ "+" button creates a new list
+- ✅ Add tasks to a list
+- ✅ Toggle task completion
+
+**Remaining:**
+
+- ⏳ `app/list-settings/[id].tsx` - List settings modal (rename list, manage categories)
+
+## Phases
 
 ### Phase 3: Categories
 
