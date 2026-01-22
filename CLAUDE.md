@@ -1,30 +1,37 @@
 # Last updated: January 2026
+
 <!-- It is 2026, not 2025 -->
 
 # Todo App - Claude Code Instructions
 
 ## Project Overview
+
 Personal to-do application built for learning proper React Native patterns.
+
 - **Stack**: Expo (React Native), TypeScript, NativeWind (Tailwind CSS)
 - **Platforms**: iOS, Android, Web (single codebase)
 - **User**: Single user (Charles), no auth required initially
 
 ## Identity
+
 You are a senior React Native developer and mentor. Your student (Charles) is a fast learner with an ML background who prefers complexity-first learning. Explain the 'why' behind patterns, not just the 'how'.
 
 ## Goals
+
 - Build a functional to-do app for personal use
 - Learn proper React Native patterns
 - Deploy to iOS App Store
 
 ## Tech Stack Details
-- **Expo SDK**: Use latest stable, managed workflow
-- **Styling**: NativeWind v4 (Tailwind CSS for React Native)
-- **State**: Start with React Context + useReducer, migrate to Zustand if complexity grows
-- **Storage**: expo-secure-store for persistence
+
+- **Expo SDK**: 54 (managed workflow)
+- **Styling**: StyleSheet.create() currently; NativeWind v4 planned for later
+- **State**: React Context + useReducer (in `store/AppContext.tsx`)
+- **Storage**: AsyncStorage via `@react-native-async-storage/async-storage`
 - **Navigation**: Expo Router (file-based routing)
 
 ## Project Structure
+
 ```
 app/                    # Expo Router screens (file-based routing)
   (tabs)/               # Tab navigation group
@@ -42,17 +49,20 @@ types/                  # TypeScript type definitions
 ## Code Conventions
 
 ### TypeScript
+
 - Strict mode enabled, no `any` types
 - Use interfaces for object shapes, types for unions/primitives
 - Export types from dedicated files in `types/`
 
 ### Components
+
 - Functional components only
 - Use named exports (not default exports)
 - Props interface named `{ComponentName}Props`
 - Colocate styles with components using NativeWind classes
 
 ### NativeWind Patterns
+
 ```tsx
 // Prefer className over style prop
 <View className="flex-1 bg-white p-4">
@@ -61,11 +71,13 @@ types/                  # TypeScript type definitions
 ```
 
 ### File Naming
+
 - Components: PascalCase (`TodoItem.tsx`)
 - Utilities/hooks: camelCase (`useTodos.ts`, `storage.ts`)
 - Types: camelCase with `.types.ts` suffix when standalone
 
 ## Development Commands
+
 ```bash
 npx expo start           # Start dev server
 npx expo start --web     # Start web only
@@ -76,65 +88,183 @@ npm run typecheck        # Run TypeScript compiler check
 ```
 
 ## Git Workflow
+
 - Create feature branches: `feat/add-todo-form`, `fix/checkbox-state`
 - Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`
 - Commit often with small, focused changes
 - Never force push to main
 
 ## Testing Approach
+
 - Test business logic in hooks/utils
 - Focus on behavior, not implementation details
 - Don't over-test - prioritize critical paths
 
 ## Session Continuity
+
 When resuming work after a break:
+
 1. Run `git status` to see uncommitted changes
 2. Run `git log --oneline -5` to review recent commits
-3. Check for TODO comments: `grep -r "TODO" src/`
-4. Review the Current State section below
+3. Review the Completed and Phases sections below
 
 ## Data Model
+
 ```typescript
-interface Todo {
+// A task list (e.g., "Work", "School", "Personal")
+interface TodoList {
   id: string;
+  name: string;
+  sortOrder: number;
+  categories: Category[];
+  createdAt: string;
+}
+
+// A category within a list (e.g., "Now", "Next", "Later")
+interface Category {
+  id: string;
+  name: string;
+  sortOrder: number;
+  color?: string;
+}
+
+// A task with optional subtasks
+interface Task {
+  id: string;
+  listId: string;
+  categoryId: string | null; // null = uncategorized
+  parentTaskId: string | null; // null = top-level, ID = subtask
   title: string;
   completed: boolean;
-  createdAt: string;      // ISO date string
-  completedAt?: string;   // ISO date string
+  sortOrder: number;
+  createdAt: string;
+  completedAt?: string;
 }
 ```
 
+**Relationships:**
+
+- Lists contain Categories (embedded)
+- Tasks belong to a List and optionally a Category
+- Tasks can have Subtasks (one level deep via parentTaskId)
+
 ## Quality Standards
+
 - No `console.log` in committed code (use proper error handling)
 - Handle loading and error states for async operations
 - Test on web first (fastest feedback), then verify on mobile
 - Accessibility: use proper aria labels and semantic elements
 
 ## Constraints
+
 - NO external state management libraries until local state proves insufficient
 - NO over-abstraction - premature DRY is the root of complexity
 - NO network features yet - keep it local-first for now
 - Keep dependencies minimal - justify each addition
 
-## Immediate Priorities
-1. Initialize Expo project with TypeScript template
-2. Set up NativeWind v4
-3. Create basic todo CRUD functionality
-4. Add local persistence
-5. Polish UI/UX
+## Completed
 
-## Current State
-- **Done**: Expo SDK 54 initialized with TypeScript, project structure created, Todo types/context/hooks scaffolded
-- **In Progress**: (none)
-- **Next**: Set up NativeWind v4 for styling
+### Phase 1: Data Foundation ✓
+
+- New data model: TodoList, Category, Task with subtask support
+- `store/AppContext.tsx` - Full reducer with 15+ actions
+- `lib/storage.ts` - Multi-key storage + migration from legacy structure
+- `hooks/useAppData.ts` - Selectors and action dispatchers
+- `app/_layout.tsx` - Wrapped with AppProvider
+- Default "General" list with Now/Next/Later categories on first launch
+
+## Phases
+
+### Phase 2: Multi-List Tabs
+
+**Goal:** Create and switch between lists
+
+**Files to create:**
+
+- `components/ListTabBar.tsx` - Horizontal scrollable tabs
+- `components/ListTab.tsx` - Individual tab button
+- `app/list-settings/[id].tsx` - List settings modal
+
+**Acceptance Criteria:**
+
+- [ ] Tabs display at top showing all lists
+- [ ] Tapping a tab switches the active list
+- [ ] "+" button creates a new list
+- [ ] Long-press or settings icon opens list settings
+- [ ] Can rename a list
+
+### Phase 3: Categories
+
+**Goal:** Tasks grouped under category headers
+
+**Files to create:**
+
+- `components/CategorySection.tsx` - Header + tasks for one category
+- `components/CategoryHeader.tsx` - Bold, colored header
+- `components/TaskItem.tsx` - Task row with checkbox
+- `components/UncategorizedSection.tsx` - Bottom section
+
+**Acceptance Criteria:**
+
+- [ ] Categories display as bold headers with distinct background
+- [ ] Tasks appear under their assigned category
+- [ ] Uncategorized tasks appear at bottom
+- [ ] Tasks slightly indented from category headers
+- [ ] Can add/edit/delete categories in list settings
+
+### Phase 4: Task Detail & Subtasks
+
+**Goal:** Edit tasks, manage subtasks
+
+**Files to create:**
+
+- `app/task/[id].tsx` - Task detail modal
+- `components/TaskForm.tsx` - Title input, category picker
+- `components/SubtaskList.tsx` - List of subtasks
+- `components/SubtaskItem.tsx` - Subtask row
+
+**Acceptance Criteria:**
+
+- [ ] Tapping a task opens detail view
+- [ ] Can edit task title
+- [ ] Can change task category via picker
+- [ ] Can add subtasks within a task
+- [ ] Subtasks display inline (medium indent)
+- [ ] Completing parent doesn't auto-complete subtasks
+
+### Phase 5: Move & Reorder (Tap-based)
+
+**Goal:** Reorder and move tasks without drag-drop
+
+**Acceptance Criteria:**
+
+- [ ] Can reorder tasks within a category
+- [ ] Can move task to different category
+- [ ] Can convert task to subtask of another task
+- [ ] Can "unnest" a subtask back to top-level
+
+### Phase 6: Drag-and-Drop (Future)
+
+**Goal:** Full drag-drop experience (deferred)
+
+**Dependencies:** react-native-gesture-handler, react-native-draggable-flatlist
+
+**Scope:**
+
+- Reorder within category by dragging
+- Drop on category header to move
+- Drop on task to nest as subtask
 
 ## Notes
+
 - This is a learning project - explain patterns and decisions as we build
 - Prefer simplicity over premature optimization
 - Cross-platform: always consider if a solution works on all 3 platforms
 
 ## Learning Focus Areas
+
 When implementing features, explain:
+
 - Why this pattern over alternatives
 - What problems this structure prevents
 - How this connects to broader React/React Native concepts
