@@ -1,7 +1,7 @@
 # Handoff Document
 
 **Last Updated:** January 2026
-**Last Session:** Completed Phase 1 (Data Foundation) and Phase 2 (Multi-List Tabs)
+**Last Session:** Completed Phase 4 (Task Detail & Subtasks) and Phase 4.5 (List Management & Navigation)
 
 ## Quick Start
 
@@ -17,24 +17,32 @@ App runs at http://localhost:8081 (or 8082 if 8081 is in use).
 The app is a functional multi-list todo application with:
 
 - Multiple todo lists (tabs at top)
-- Add/toggle tasks within each list
+- Tasks grouped by category within each list
+- Subtasks (one level deep)
+- Task detail modal for editing
+- List settings for rename/delete
 - Data persists to AsyncStorage
 
 **What works:**
 
-- Create new lists via "+" button
+- Create new lists via "+" button (with default Now/Next/Later categories)
 - Switch between lists by tapping tabs
+- Double-click (web) or long-press (mobile) opens list settings
+- Rename and delete lists (delete has high-visibility warning)
 - Add tasks via input at bottom
-- Toggle task completion by tapping the row
+- Toggle task completion by tapping the checkbox
+- Tap task to open detail modal
+- Edit task title and change category
+- Add/toggle/delete subtasks
+- Delete tasks with confirmation
 - Data persists across refreshes
+- Active list persists (navigating back from task detail stays on correct list)
 
 **What's not built yet:**
 
-- Categories are stored but not displayed (tasks show in a flat list)
-- Subtasks data model exists but no UI
-- List settings modal (rename, delete list)
-- Task detail view (edit title, change category)
+- Category CRUD (add/edit/delete categories within a list)
 - Reordering tasks
+- Moving tasks between categories
 
 ## Architecture Overview
 
@@ -48,15 +56,19 @@ User Action → useAppData hook → dispatch(action) → AppContext reducer → 
 
 ### Key Files
 
-| File                          | Purpose                                          |
-| ----------------------------- | ------------------------------------------------ |
-| `types/todo.ts`               | Data model: TodoList, Category, Task             |
-| `store/AppContext.tsx`        | React Context + useReducer (15+ actions)         |
-| `hooks/useAppData.ts`         | Main hook - selectors, actions, auto-persistence |
-| `lib/storage.ts`              | AsyncStorage wrapper + migration logic           |
-| `app/(tabs)/index.tsx`        | Main todo screen                                 |
-| `components/ListTabBar.tsx`   | List tab navigation                              |
-| `components/AddTaskInput.tsx` | Task input field                                 |
+| File                             | Purpose                                          |
+| -------------------------------- | ------------------------------------------------ |
+| `types/todo.ts`                  | Data model: TodoList, Category, Task             |
+| `store/AppContext.tsx`           | React Context + useReducer (15+ actions)         |
+| `hooks/useAppData.ts`            | Main hook - selectors, actions, auto-persistence |
+| `lib/storage.ts`                 | AsyncStorage wrapper + migration logic           |
+| `app/(tabs)/index.tsx`           | Main todo screen with list settings modal        |
+| `app/task/[id].tsx`              | Task detail modal                                |
+| `components/ListTabBar.tsx`      | List tab navigation                              |
+| `components/ListTab.tsx`         | Individual tab with double-click detection       |
+| `components/CategorySection.tsx` | Category header + tasks                          |
+| `components/TaskItem.tsx`        | Task row with checkbox and indentation           |
+| `components/AddTaskInput.tsx`    | Task input field                                 |
 
 ### State Shape
 
@@ -64,7 +76,7 @@ User Action → useAppData hook → dispatch(action) → AppContext reducer → 
 {
   lists: TodoList[],      // All todo lists with embedded categories
   tasks: Task[],          // All tasks (flat array, filtered by listId)
-  activeListId: string,   // Currently selected list
+  activeListId: string,   // Currently selected list (persisted!)
   isLoading: boolean,
   error: string | null
 }
@@ -78,60 +90,48 @@ User Action → useAppData hook → dispatch(action) → AppContext reducer → 
 
 ## Next Steps (Priority Order)
 
-### 1. List Settings Modal (finish Phase 2)
+### 1. Pre-Phase 5: Double-Click UX Improvement
 
-Create `app/list-settings/[id].tsx` to:
+Current double-click detection (300ms threshold) isn't sensitive enough. Options to explore:
 
-- Rename a list
-- Delete a list
-- Manage categories (add/edit/delete)
+- Increase threshold (400-500ms)
+- Add visual feedback on first click
+- Right-click context menu for web
+- Hover-reveal settings icon
 
-Wire it up via long-press on list tabs (handler exists, shows Alert placeholder).
-
-### 2. Phase 3: Categories
-
-Display tasks grouped by category:
-
-- Create `CategorySection.tsx` - renders category header + its tasks
-- Create `CategoryHeader.tsx` - bold header with background color
-- Extract `TaskItem.tsx` from index.tsx for reuse
-- Uncategorized tasks go at bottom
-
-The `tasksByCategory` selector in useAppData already groups tasks - just need UI.
-
-### 3. Phase 4: Task Detail & Subtasks
-
-Create `app/task/[id].tsx` modal for:
-
-- Editing task title
-- Changing task category (dropdown)
-- Adding/managing subtasks
-
-Subtask data model is ready (`parentTaskId` field).
-
-### 4. Phase 5: Move & Reorder
+### 2. Phase 5: Move & Reorder (Tap-based)
 
 Add tap-based controls:
 
 - Move task up/down within category
 - Move task to different category
 - Nest task as subtask of another
+- Unnest subtask back to top-level
 
-### 5. Phase 6: Drag-and-Drop (Future)
+### 3. List Settings Enhancement
+
+Add category CRUD to list settings:
+
+- Add new category
+- Rename category
+- Delete category (moves tasks to uncategorized)
+- Reorder categories
+
+### 4. Phase 6: Drag-and-Drop (Future)
 
 Requires: `react-native-gesture-handler`, `react-native-draggable-flatlist`
 
 ## Known Issues / Tech Debt
 
-1. **Unused "Tab Two"** - The Expo template's second tab still exists at `app/(tabs)/two.tsx`. Can be removed or repurposed.
+1. **Double-click sensitivity** - 300ms threshold may be too tight for some users. Needs UX review.
 
-2. **No delete task UI** - Can toggle complete but not delete. Add swipe-to-delete or delete button in task detail.
+2. **pointerEvents warning** - React Native Web shows deprecation warning. It's from the library, not our code. Can be ignored.
 
-3. **Default list always created** - On first launch, "General" list with Now/Next/Later categories is auto-created. This is intentional but could be configurable.
+3. **shadow\* style warning** - "shadow\*" style props deprecated, use "boxShadow". Shows in list settings modal. Low priority.
 
-4. **pointerEvents warning** - React Native Web shows deprecation warning. It's from the library, not our code. Can be ignored.
+4. **NativeWind not set up** - Using StyleSheet.create(). NativeWind v4 is planned but deferred.
 
-5. **NativeWind not set up** - Using StyleSheet.create(). NativeWind v4 is planned but deferred.
+5. **Unused "Tab Two"** - The Expo template's second tab still exists at `app/(tabs)/two.tsx`. Can be removed or repurposed.
 
 ## Testing Checklist
 
@@ -139,11 +139,18 @@ When making changes, verify:
 
 - [ ] TypeScript compiles: `npx tsc --noEmit`
 - [ ] App loads on web without errors
-- [ ] Creating a new list works
+- [ ] Creating a new list works (gets default categories)
 - [ ] Switching lists works
+- [ ] Double-click opens list settings
+- [ ] Rename and delete list work
 - [ ] Adding tasks works
 - [ ] Toggling tasks works
+- [ ] Tapping task opens detail modal
+- [ ] Editing task title/category works
+- [ ] Adding subtasks works
+- [ ] Deleting tasks works
 - [ ] Data persists after refresh
+- [ ] Active list persists after refresh
 
 ## Conventions
 
@@ -151,20 +158,37 @@ When making changes, verify:
 - **Components:** Named exports, Props interface as `{Name}Props`
 - **Styling:** StyleSheet.create() with styles at bottom of file
 - **State:** All state changes through useAppData hook actions
+- **Platform detection:** Use `Platform.OS === "web"` for web-specific code (e.g., window.confirm vs Alert.alert)
 
 ## Important Implementation Details
 
 ### Auto-Persistence
 
-Data automatically saves to AsyncStorage whenever `state.lists` or `state.tasks` changes. This is handled by a `useEffect` in `useAppData.ts`. No manual save calls needed.
+Data automatically saves to AsyncStorage whenever `state.lists`, `state.tasks`, or `state.activeListId` changes. This is handled by `useEffect` hooks in `useAppData.ts`. No manual save calls needed.
+
+### Active List Persistence
+
+The `activeListId` is now persisted separately. When the app loads, it restores the last active list. If that list was deleted, it falls back to the first list. This ensures navigating back from task detail stays on the correct list.
+
+### Double-Click Detection
+
+`ListTab.tsx` implements double-click detection using a ref to track last click time. If two clicks occur within 300ms, it triggers `onLongPress` (settings). Otherwise, it's a single click (select list).
+
+### Platform-Specific Dialogs
+
+- **Web:** Uses `window.confirm()` and `window.prompt()` for dialogs
+- **Native:** Uses React Native's `Alert.alert()`
+
+Check `Platform.OS === "web"` before using browser APIs.
 
 ### Migration Logic
 
 On first load, `lib/storage.ts` checks for legacy data (old `todos` key) and migrates it to the new multi-list structure. Safe to run multiple times - only migrates if new data doesn't exist.
 
-### Default List Creation
+### Default List/Categories
 
-If no lists exist on load, a "General" list with Now/Next/Later categories is auto-created. This ensures the app always has something to display.
+- New lists get default Now/Next/Later categories (not empty)
+- If no lists exist on load, a "General" list is auto-created
 
 ### Expo Router Conventions
 

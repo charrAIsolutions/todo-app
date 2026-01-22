@@ -28,6 +28,7 @@ export default function TaskDetailScreen() {
     deleteTask,
     toggleTask,
     addTask,
+    setActiveList,
   } = useAppData();
 
   // Find the task and its list (not activeList - the task's actual list)
@@ -49,6 +50,14 @@ export default function TaskDetailScreen() {
       setSelectedCategoryId(task.categoryId);
     }
   }, [task]);
+
+  // Set active list to task's list when viewing this screen
+  // This ensures going back lands on the correct list
+  useEffect(() => {
+    if (task?.listId) {
+      setActiveList(task.listId);
+    }
+  }, [task?.listId, setActiveList]);
 
   if (!task) {
     return (

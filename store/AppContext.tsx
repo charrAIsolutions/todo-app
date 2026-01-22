@@ -35,7 +35,14 @@ const initialState: AppState = {
 
 type AppAction =
   // Hydration & Loading
-  | { type: "HYDRATE"; payload: { lists: TodoList[]; tasks: Task[] } }
+  | {
+      type: "HYDRATE";
+      payload: {
+        lists: TodoList[];
+        tasks: Task[];
+        activeListId: string | null;
+      };
+    }
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "SET_ERROR"; payload: string | null }
 
@@ -99,12 +106,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
     // Hydration & Loading
     // -------------------------------------------------------------------------
     case "HYDRATE": {
-      const { lists, tasks } = action.payload;
+      const { lists, tasks, activeListId } = action.payload;
       return {
         ...state,
         lists,
         tasks,
-        activeListId: lists.length > 0 ? lists[0].id : null,
+        activeListId,
         isLoading: false,
       };
     }

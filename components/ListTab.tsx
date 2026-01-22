@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Pressable, Text, StyleSheet } from "react-native";
 
 interface ListTabProps {
@@ -7,10 +8,12 @@ interface ListTabProps {
   onLongPress?: () => void;
 }
 
+const DOUBLE_CLICK_DELAY = 300; // ms
+
 /**
  * Individual tab button for a todo list.
  * Active state shows with different background/text color.
- * Long-press opens list settings.
+ * Long-press (mobile) or double-click (web) opens list settings.
  */
 export function ListTab({
   name,
@@ -18,9 +21,26 @@ export function ListTab({
   onPress,
   onLongPress,
 }: ListTabProps) {
+  const lastClickTime = useRef<number>(0);
+
+  const handlePress = () => {
+    const now = Date.now();
+    const timeSinceLastClick = now - lastClickTime.current;
+
+    if (timeSinceLastClick < DOUBLE_CLICK_DELAY) {
+      // Double-click detected - trigger settings
+      lastClickTime.current = 0; // Reset to prevent triple-click
+      onLongPress?.();
+    } else {
+      // Single click - select the tab
+      lastClickTime.current = now;
+      onPress();
+    }
+  };
+
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       onLongPress={onLongPress}
       style={({ pressed }) => [
         styles.tab,

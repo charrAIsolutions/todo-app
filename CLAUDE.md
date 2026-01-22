@@ -212,27 +212,51 @@ interface Task {
 
 - ⏳ Category CRUD in list settings (deferred to list-settings modal)
 
+### Phase 4: Task Detail & Subtasks ✓
+
+- `app/task/[id].tsx` - Task detail modal with title editing, category picker, subtask management
+- Navigation from main list to task detail via tap
+- Delete task with confirmation (web uses window.confirm, native uses Alert)
+- New lists get default Now/Next/Later categories
+
+**Working:**
+
+- ✅ Tapping a task opens detail view
+- ✅ Can edit task title
+- ✅ Can change task category via picker
+- ✅ Can add subtasks within a task
+- ✅ Can toggle/delete subtasks
+- ✅ Subtasks display inline (medium indent)
+- ✅ Delete task with confirmation dialog
+
+### Phase 4.5: List Management & Navigation ✓
+
+- List settings modal (double-click on web, long-press on mobile)
+- Rename list functionality
+- Delete list with high-visibility warning (red danger zone, shows task count)
+- Active list ID now persists to storage
+- Navigating back from task detail stays on the task's list
+
+**Working:**
+
+- ✅ Double-click or long-press opens list settings
+- ✅ Rename list inline
+- ✅ Delete list with alarming confirmation
+- ✅ Active list persists across refreshes
+- ✅ Back navigation stays on correct list
+
 ## Phases
 
-### Phase 4: Task Detail & Subtasks
+### Pre-Phase 5: UX Planning
 
-**Goal:** Edit tasks, manage subtasks
+**Goal:** Improve double-click detection for list settings
 
-**Files to create:**
+**Issue:** Current double-click detection (300ms threshold) isn't sensitive enough on desktop. Need to explore better solutions:
 
-- `app/task/[id].tsx` - Task detail modal
-- `components/TaskForm.tsx` - Title input, category picker
-- `components/SubtaskList.tsx` - List of subtasks
-- `components/SubtaskItem.tsx` - Subtask row
-
-**Acceptance Criteria:**
-
-- [ ] Tapping a task opens detail view
-- [ ] Can edit task title
-- [ ] Can change task category via picker
-- [ ] Can add subtasks within a task
-- [ ] Subtasks display inline (medium indent)
-- [ ] Completing parent doesn't auto-complete subtasks
+- Adjust timing threshold
+- Add visual feedback on first click
+- Consider right-click context menu for web
+- Consider hover-reveal settings icon
 
 ### Phase 5: Move & Reorder (Tap-based)
 

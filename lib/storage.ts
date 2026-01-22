@@ -155,21 +155,26 @@ export async function migrateFromLegacy(): Promise<{
 
 /**
  * Load app data from storage, handling migration if needed.
- * Returns the current state of lists and tasks.
+ * Returns the current state of lists, tasks, and activeListId.
  */
 export async function loadAppData(): Promise<{
   lists: TodoList[];
   tasks: Task[];
+  activeListId: string | null;
 }> {
   // First, check if migration is needed
   const migrationResult = await migrateFromLegacy();
   if (migrationResult) {
-    return migrationResult;
+    return {
+      ...migrationResult,
+      activeListId: migrationResult.lists[0]?.id ?? null,
+    };
   }
 
   // Load existing data
   const lists = (await storage.getLists()) ?? [];
   const tasks = (await storage.getTasks()) ?? [];
+  const savedActiveListId = await storage.getActiveListId();
 
   // If no data at all, create a default list
   if (lists.length === 0) {
@@ -185,8 +190,13 @@ export async function loadAppData(): Promise<{
       createdAt: nowISO(),
     };
     await storage.setLists([defaultList]);
-    return { lists: [defaultList], tasks: [] };
+    return { lists: [defaultList], tasks: [], activeListId: defaultList.id };
   }
 
-  return { lists, tasks };
+  // Validate that savedActiveListId still exists, otherwise use first list
+  const activeListId = lists.some((l) => l.id === savedActiveListId)
+    ? savedActiveListId
+    : (lists[0]?.id ?? null);
+
+  return { lists, tasks, activeListId };
 }

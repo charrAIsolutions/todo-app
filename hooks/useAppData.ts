@@ -22,9 +22,12 @@ export function useAppData() {
 
     async function hydrate() {
       try {
-        const { lists, tasks } = await loadAppData();
+        const { lists, tasks, activeListId } = await loadAppData();
         if (mounted) {
-          dispatch({ type: "HYDRATE", payload: { lists, tasks } });
+          dispatch({
+            type: "HYDRATE",
+            payload: { lists, tasks, activeListId },
+          });
         }
       } catch (error) {
         if (mounted) {
@@ -55,6 +58,12 @@ export function useAppData() {
     storage.setLists(state.lists);
     storage.setTasks(state.tasks);
   }, [state.lists, state.tasks, state.isLoading]);
+
+  // Persist activeListId separately (changes more frequently)
+  useEffect(() => {
+    if (state.isLoading) return;
+    storage.setActiveListId(state.activeListId);
+  }, [state.activeListId, state.isLoading]);
 
   // ---------------------------------------------------------------------------
   // Derived Data: Active list
