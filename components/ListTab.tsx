@@ -1,5 +1,6 @@
 import { useRef } from "react";
-import { Pressable, Text, StyleSheet } from "react-native";
+import { Pressable, Text, StyleSheet, View, Platform } from "react-native";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 
 interface ListTabProps {
   name: string;
@@ -8,12 +9,14 @@ interface ListTabProps {
   onLongPress?: () => void;
 }
 
-const DOUBLE_CLICK_DELAY = 300; // ms
+const DOUBLE_CLICK_DELAY = 400; // ms
+const isWeb = Platform.OS === "web";
 
 /**
  * Individual tab button for a todo list.
  * Active state shows with different background/text color.
  * Long-press (mobile) or double-click (web) opens list settings.
+ * On web, a settings icon appears on hover.
  */
 export function ListTab({
   name,
@@ -38,6 +41,11 @@ export function ListTab({
     }
   };
 
+  const handleSettingsIconPress = (e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+    onLongPress?.();
+  };
+
   return (
     <Pressable
       onPress={handlePress}
@@ -48,9 +56,36 @@ export function ListTab({
         pressed && styles.tabPressed,
       ]}
     >
-      <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
-        {name}
-      </Text>
+      {({ hovered }: { hovered: boolean }) => (
+        <View style={styles.tabContent}>
+          <Text
+            style={[
+              styles.tabText,
+              isActive && styles.tabTextActive,
+              isWeb && styles.noSelect,
+            ]}
+          >
+            {name}
+          </Text>
+          {isWeb && (
+            <Pressable
+              onPress={handleSettingsIconPress}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.settingsIcon,
+                !hovered && styles.settingsIconHidden,
+                pressed && styles.settingsIconPressed,
+              ]}
+            >
+              <FontAwesome
+                name="ellipsis-v"
+                size={14}
+                color={isActive ? "#fff" : "#666"}
+              />
+            </Pressable>
+          )}
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -69,6 +104,11 @@ const styles = StyleSheet.create({
   tabPressed: {
     opacity: 0.7,
   },
+  tabContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   tabText: {
     fontSize: 15,
     fontWeight: "500",
@@ -78,4 +118,16 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
   },
+  settingsIcon: {
+    padding: 2,
+  },
+  settingsIconHidden: {
+    opacity: 0,
+  },
+  settingsIconPressed: {
+    opacity: 0.5,
+  },
+  noSelect: {
+    userSelect: "none",
+  } as const,
 });
