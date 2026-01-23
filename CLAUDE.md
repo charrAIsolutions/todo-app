@@ -245,18 +245,21 @@ interface Task {
 - ✅ Active list persists across refreshes
 - ✅ Back navigation stays on correct list
 
+### Pre-Phase 5: UX Planning ✓
+
+- Added hover-reveal settings icon on web (ellipsis-v)
+- Increased double-click delay from 300ms to 400ms
+- Added `userSelect: none` to prevent text selection on double-click
+- Icon uses opacity toggle to maintain stable layout
+
+**Working:**
+
+- ✅ Hover over tab shows settings icon (web only)
+- ✅ Click icon opens list settings without selecting tab
+- ✅ Double-click still works as power-user shortcut
+- ✅ Long-press works on mobile (no icon clutter)
+
 ## Phases
-
-### Pre-Phase 5: UX Planning
-
-**Goal:** Improve double-click detection for list settings
-
-**Issue:** Current double-click detection (300ms threshold) isn't sensitive enough on desktop. Need to explore better solutions:
-
-- Adjust timing threshold
-- Add visual feedback on first click
-- Consider right-click context menu for web
-- Consider hover-reveal settings icon
 
 ### Phase 5: Move & Reorder (Tap-based)
 
