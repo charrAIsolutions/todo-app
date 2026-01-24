@@ -236,6 +236,20 @@ export function useAppData() {
     [dispatch],
   );
 
+  const reorderTasks = useCallback(
+    (
+      taskIds: string[],
+      categoryId: string | null,
+      parentTaskId?: string | null,
+    ) => {
+      dispatch({
+        type: "REORDER_TASKS",
+        payload: { taskIds, categoryId, parentTaskId },
+      });
+    },
+    [dispatch],
+  );
+
   // ---------------------------------------------------------------------------
   // Return
   // ---------------------------------------------------------------------------
@@ -270,5 +284,6 @@ export function useAppData() {
     toggleTask,
     moveTask,
     nestTask,
+    reorderTasks,
   };
 }

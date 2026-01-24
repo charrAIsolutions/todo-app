@@ -259,18 +259,23 @@ interface Task {
 - ✅ Double-click still works as power-user shortcut
 - ✅ Long-press works on mobile (no icon clutter)
 
+### Phase 5: Move & Reorder (Tap-based) ✓
+
+- Extended `REORDER_TASKS` reducer to support subtask reordering via `parentTaskId`
+- Added `reorderTasks` dispatcher in `hooks/useAppData.ts`
+- Position section in task detail modal with up/down arrows
+- Nest/Unnest section: "Make Subtask Of" for top-level tasks, "Convert to Top-Level Task" for subtasks
+
+**Working:**
+
+- ✅ Can reorder tasks within a category (up/down arrows)
+- ✅ Can move task to different category (existing category picker)
+- ✅ Can convert task to subtask of another task ("Make Subtask Of" list)
+- ✅ Can "unnest" a subtask back to top-level ("Convert to Top-Level Task" button)
+- ✅ Position section only shows when multiple siblings exist
+- ✅ Up/down buttons disable appropriately at boundaries
+
 ## Phases
-
-### Phase 5: Move & Reorder (Tap-based)
-
-**Goal:** Reorder and move tasks without drag-drop
-
-**Acceptance Criteria:**
-
-- [ ] Can reorder tasks within a category
-- [ ] Can move task to different category
-- [ ] Can convert task to subtask of another task
-- [ ] Can "unnest" a subtask back to top-level
 
 ### Phase 6: Drag-and-Drop (Future)
 

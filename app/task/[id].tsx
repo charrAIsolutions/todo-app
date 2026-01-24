@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   StyleSheet,
   View,
@@ -29,6 +29,8 @@ export default function TaskDetailScreen() {
     toggleTask,
     addTask,
     setActiveList,
+    nestTask,
+    reorderTasks,
   } = useAppData();
 
   // Find the task and its list (not activeList - the task's actual list)
@@ -58,6 +60,60 @@ export default function TaskDetailScreen() {
       setActiveList(task.listId);
     }
   }, [task?.listId, setActiveList]);
+
+  // ---------------------------------------------------------------------------
+  // Position: Sibling tasks for reordering
+  // ---------------------------------------------------------------------------
+  const siblingTasks = useMemo(() => {
+    if (!task) return [];
+    if (task.parentTaskId) {
+      // Subtask: siblings are other subtasks of same parent
+      return tasks
+        .filter((t) => t.parentTaskId === task.parentTaskId)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+    } else {
+      // Top-level: siblings are tasks with same listId, categoryId, no parent
+      return tasks
+        .filter(
+          (t) =>
+            t.listId === task.listId &&
+            t.categoryId === task.categoryId &&
+            t.parentTaskId === null,
+        )
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+    }
+  }, [tasks, task]);
+
+  const currentPosition = useMemo(() => {
+    if (!task) return 0;
+    return siblingTasks.findIndex((t) => t.id === task.id) + 1;
+  }, [siblingTasks, task]);
+
+  const canMoveUp = currentPosition > 1;
+  const canMoveDown = currentPosition < siblingTasks.length;
+
+  // ---------------------------------------------------------------------------
+  // Nest/Unnest: Potential parent tasks
+  // ---------------------------------------------------------------------------
+  const potentialParents = useMemo(() => {
+    if (!task || task.parentTaskId !== null) return [];
+    // Can only nest under other top-level tasks in same list
+    return tasks
+      .filter(
+        (t) =>
+          t.listId === task.listId &&
+          t.parentTaskId === null &&
+          t.id !== task.id,
+      )
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [tasks, task]);
+
+  const parentTask = useMemo(() => {
+    if (!task?.parentTaskId) return null;
+    return tasks.find((t) => t.id === task.parentTaskId) ?? null;
+  }, [tasks, task]);
+
+  const isSubtask = task?.parentTaskId !== null;
 
   if (!task) {
     return (
@@ -124,6 +180,40 @@ export default function TaskDetailScreen() {
         ],
       );
     }
+  };
+
+  const handleMoveUp = () => {
+    if (!canMoveUp) return;
+    const currentIndex = siblingTasks.findIndex((t) => t.id === task.id);
+    const newOrder = [...siblingTasks];
+    // Swap with previous
+    [newOrder[currentIndex - 1], newOrder[currentIndex]] = [
+      newOrder[currentIndex],
+      newOrder[currentIndex - 1],
+    ];
+    const newIds = newOrder.map((t) => t.id);
+    reorderTasks(newIds, task.categoryId, task.parentTaskId);
+  };
+
+  const handleMoveDown = () => {
+    if (!canMoveDown) return;
+    const currentIndex = siblingTasks.findIndex((t) => t.id === task.id);
+    const newOrder = [...siblingTasks];
+    // Swap with next
+    [newOrder[currentIndex], newOrder[currentIndex + 1]] = [
+      newOrder[currentIndex + 1],
+      newOrder[currentIndex],
+    ];
+    const newIds = newOrder.map((t) => t.id);
+    reorderTasks(newIds, task.categoryId, task.parentTaskId);
+  };
+
+  const handleNestUnder = (parentId: string) => {
+    nestTask(task.id, parentId);
+  };
+
+  const handleUnnest = () => {
+    nestTask(task.id, null);
   };
 
   return (
@@ -205,6 +295,99 @@ export default function TaskDetailScreen() {
             ))}
           </View>
         </View>
+
+        {/* Position - only show if more than one sibling */}
+        {siblingTasks.length > 1 && (
+          <View style={styles.section}>
+            <Text style={styles.label}>Position</Text>
+            <View style={styles.positionRow}>
+              <Text style={styles.positionText}>
+                {currentPosition} of {siblingTasks.length}
+              </Text>
+              <View style={styles.positionButtons}>
+                <Pressable
+                  style={[
+                    styles.positionButton,
+                    !canMoveUp && styles.positionButtonDisabled,
+                  ]}
+                  onPress={handleMoveUp}
+                  disabled={!canMoveUp}
+                >
+                  <FontAwesome
+                    name="chevron-up"
+                    size={16}
+                    color={canMoveUp ? "#007AFF" : "#ccc"}
+                  />
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.positionButton,
+                    !canMoveDown && styles.positionButtonDisabled,
+                  ]}
+                  onPress={handleMoveDown}
+                  disabled={!canMoveDown}
+                >
+                  <FontAwesome
+                    name="chevron-down"
+                    size={16}
+                    color={canMoveDown ? "#007AFF" : "#ccc"}
+                  />
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Nest/Unnest Section */}
+        {isSubtask ? (
+          // Show parent info and unnest button for subtasks
+          <View style={styles.section}>
+            <Text style={styles.label}>Parent Task</Text>
+            <View style={styles.parentInfoRow}>
+              <Text style={styles.parentName} numberOfLines={1}>
+                {parentTask?.title ?? "Unknown"}
+              </Text>
+            </View>
+            <Pressable style={styles.unnestButton} onPress={handleUnnest}>
+              <FontAwesome
+                name="level-up"
+                size={14}
+                color="#007AFF"
+                style={styles.unnestIcon}
+              />
+              <Text style={styles.unnestButtonText}>
+                Convert to Top-Level Task
+              </Text>
+            </Pressable>
+          </View>
+        ) : potentialParents.length > 0 ? (
+          // Show nest options for top-level tasks
+          <View style={styles.section}>
+            <Text style={styles.label}>Make Subtask Of</Text>
+            {potentialParents.slice(0, 5).map((parent) => (
+              <Pressable
+                key={parent.id}
+                style={styles.nestOption}
+                onPress={() => handleNestUnder(parent.id)}
+              >
+                <FontAwesome
+                  name="level-down"
+                  size={14}
+                  color="#666"
+                  style={styles.nestIcon}
+                />
+                <Text style={styles.nestOptionText} numberOfLines={1}>
+                  {parent.title}
+                </Text>
+              </Pressable>
+            ))}
+            {potentialParents.length > 5 && (
+              <Text style={styles.moreHint}>
+                +{potentialParents.length - 5} more tasks
+              </Text>
+            )}
+          </View>
+        ) : null}
 
         {/* Completion Status */}
         <View style={styles.section}>
@@ -454,5 +637,91 @@ const styles = StyleSheet.create({
   },
   addSubtaskButtonDisabled: {
     opacity: 0.5,
+  },
+  // Position section styles
+  positionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f8f8f8",
+    padding: 12,
+    borderRadius: 8,
+  },
+  positionText: {
+    fontSize: 16,
+    color: "#333",
+    fontWeight: "500",
+  },
+  positionButtons: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  positionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  positionButtonDisabled: {
+    backgroundColor: "#f8f8f8",
+    borderColor: "#eee",
+  },
+  // Nest/Unnest section styles
+  parentInfoRow: {
+    backgroundColor: "#f8f8f8",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  parentName: {
+    fontSize: 15,
+    color: "#333",
+    fontWeight: "500",
+  },
+  unnestButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    backgroundColor: "#EBF5FF",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#007AFF",
+  },
+  unnestIcon: {
+    marginRight: 8,
+    transform: [{ rotate: "90deg" }],
+  },
+  unnestButtonText: {
+    fontSize: 15,
+    color: "#007AFF",
+    fontWeight: "500",
+  },
+  nestOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    backgroundColor: "#f8f8f8",
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  nestIcon: {
+    marginRight: 10,
+    transform: [{ rotate: "-90deg" }],
+  },
+  nestOptionText: {
+    flex: 1,
+    fontSize: 15,
+    color: "#333",
+  },
+  moreHint: {
+    fontSize: 13,
+    color: "#999",
+    fontStyle: "italic",
+    paddingLeft: 4,
+    marginTop: 4,
   },
 });

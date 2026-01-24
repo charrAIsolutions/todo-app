@@ -93,7 +93,11 @@ type AppAction =
     }
   | {
       type: "REORDER_TASKS";
-      payload: { taskIds: string[]; categoryId: string | null };
+      payload: {
+        taskIds: string[];
+        categoryId: string | null;
+        parentTaskId?: string | null;
+      };
     };
 
 // =============================================================================
@@ -131,7 +135,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case "ADD_LIST": {
       const { name, categories } = action.payload;
       // Default categories if none provided
-      const defaultCategories = [
+      const defaultCategories: CategoryInput[] = [
         { name: "Now" },
         { name: "Next" },
         { name: "Later" },
@@ -365,13 +369,25 @@ function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case "REORDER_TASKS": {
-      const { taskIds, categoryId } = action.payload;
+      const { taskIds, categoryId, parentTaskId } = action.payload;
       const orderMap = new Map(taskIds.map((id, index) => [id, index]));
       return {
         ...state,
         tasks: state.tasks.map((task) => {
           const newOrder = orderMap.get(task.id);
-          if (newOrder !== undefined && task.categoryId === categoryId) {
+          if (newOrder === undefined) return task;
+
+          // For subtask reordering (parentTaskId is provided and not null)
+          if (parentTaskId !== undefined && parentTaskId !== null) {
+            if (task.parentTaskId === parentTaskId) {
+              return { ...task, sortOrder: newOrder };
+            }
+          }
+          // For top-level task reordering (parentTaskId is null or undefined)
+          else if (
+            task.categoryId === categoryId &&
+            task.parentTaskId === null
+          ) {
             return { ...task, sortOrder: newOrder };
           }
           return task;
