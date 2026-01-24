@@ -23,8 +23,9 @@ export function CategorySection({
   onToggleTask,
   onPressTask,
 }: CategorySectionProps) {
-  if (tasks.length === 0) {
-    return null; // Don't render empty categories
+  // For uncategorized, only show if there are tasks
+  if (!category && tasks.length === 0) {
+    return null;
   }
 
   return (
@@ -36,33 +37,37 @@ export function CategorySection({
         <UncategorizedHeader taskCount={tasks.length} />
       )}
 
-      {/* Tasks */}
-      <View style={styles.taskList}>
-        {tasks.map((task) => (
-          <View key={task.id}>
-            {/* Parent Task */}
-            <TaskItem
-              task={task}
-              onToggle={() => onToggleTask(task.id)}
-              onPress={onPressTask ? () => onPressTask(task.id) : undefined}
-              indentLevel={1}
-            />
-
-            {/* Subtasks */}
-            {subtasksByParent.get(task.id)?.map((subtask) => (
+      {/* Tasks (or empty space for drop target) */}
+      {tasks.length > 0 ? (
+        <View style={styles.taskList}>
+          {tasks.map((task) => (
+            <View key={task.id}>
+              {/* Parent Task */}
               <TaskItem
-                key={subtask.id}
-                task={subtask}
-                onToggle={() => onToggleTask(subtask.id)}
-                onPress={
-                  onPressTask ? () => onPressTask(subtask.id) : undefined
-                }
-                indentLevel={2}
+                task={task}
+                onToggle={() => onToggleTask(task.id)}
+                onPress={onPressTask ? () => onPressTask(task.id) : undefined}
+                indentLevel={1}
               />
-            ))}
-          </View>
-        ))}
-      </View>
+
+              {/* Subtasks */}
+              {subtasksByParent.get(task.id)?.map((subtask) => (
+                <TaskItem
+                  key={subtask.id}
+                  task={subtask}
+                  onToggle={() => onToggleTask(subtask.id)}
+                  onPress={
+                    onPressTask ? () => onPressTask(subtask.id) : undefined
+                  }
+                  indentLevel={2}
+                />
+              ))}
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.emptyCategory} />
+      )}
     </View>
   );
 }
@@ -73,5 +78,14 @@ const styles = StyleSheet.create({
   },
   taskList: {
     // Tasks are indented via TaskItem's indentLevel prop
+  },
+  emptyCategory: {
+    height: 32,
+    marginLeft: 16,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderStyle: "dashed",
+    borderRadius: 8,
+    backgroundColor: "#fafafa",
   },
 });

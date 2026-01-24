@@ -35,6 +35,10 @@ export default function TodoScreen() {
     addList,
     updateList,
     deleteList,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    reorderCategories,
     addTask,
     toggleTask,
   } = useAppData();
@@ -48,10 +52,40 @@ export default function TodoScreen() {
   const [renameValue, setRenameValue] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Category management state
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
+    null,
+  );
+  const [editCategoryValue, setEditCategoryValue] = useState("");
+  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(
+    null,
+  );
+
   const settingsList = lists.find((l) => l.id === settingsListId);
   const taskCountForSettingsList = settingsListId
     ? tasks.filter((t) => t.listId === settingsListId).length
     : 0;
+
+  // Sorted categories for the settings modal
+  const settingsCategories = settingsList?.categories
+    ? [...settingsList.categories].sort((a, b) => a.sortOrder - b.sortOrder)
+    : [];
+
+  // Task count by category for delete warnings
+  const taskCountByCategory = settingsListId
+    ? tasks
+        .filter((t) => t.listId === settingsListId)
+        .reduce(
+          (acc, task) => {
+            const key = task.categoryId ?? "uncategorized";
+            acc[key] = (acc[key] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>,
+        )
+    : {};
 
   const handleAddList = () => {
     setIsCreatingList(true);
@@ -86,6 +120,12 @@ export default function TodoScreen() {
     setSettingsListId(null);
     setIsRenaming(false);
     setShowDeleteConfirm(false);
+    // Reset category management state
+    setIsAddingCategory(false);
+    setNewCategoryName("");
+    setEditingCategoryId(null);
+    setEditCategoryValue("");
+    setDeletingCategoryId(null);
   };
 
   const handleRenameList = () => {
@@ -105,6 +145,62 @@ export default function TodoScreen() {
 
   const handlePressTask = (taskId: string) => {
     router.push(`/task/${taskId}`);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Category Management Handlers
+  // ---------------------------------------------------------------------------
+  const handleAddCategory = () => {
+    const name = newCategoryName.trim();
+    if (name && settingsListId) {
+      addCategory(settingsListId, { name });
+      setNewCategoryName("");
+      setIsAddingCategory(false);
+    }
+  };
+
+  const handleStartEditCategory = (categoryId: string, currentName: string) => {
+    setEditingCategoryId(categoryId);
+    setEditCategoryValue(currentName);
+  };
+
+  const handleSaveCategory = () => {
+    const trimmed = editCategoryValue.trim();
+    if (trimmed && settingsListId && editingCategoryId) {
+      updateCategory(settingsListId, editingCategoryId, { name: trimmed });
+      setEditingCategoryId(null);
+      setEditCategoryValue("");
+    }
+  };
+
+  const handleCancelEditCategory = () => {
+    setEditingCategoryId(null);
+    setEditCategoryValue("");
+  };
+
+  const handleDeleteCategory = (categoryId: string) => {
+    if (settingsListId) {
+      deleteCategory(settingsListId, categoryId);
+      setDeletingCategoryId(null);
+    }
+  };
+
+  const handleMoveCategoryUp = (categoryId: string) => {
+    if (!settingsListId) return;
+    const idx = settingsCategories.findIndex((c) => c.id === categoryId);
+    if (idx <= 0) return;
+    const newOrder = settingsCategories.map((c) => c.id);
+    [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
+    reorderCategories(settingsListId, newOrder);
+  };
+
+  const handleMoveCategoryDown = (categoryId: string) => {
+    if (!settingsListId) return;
+    const idx = settingsCategories.findIndex((c) => c.id === categoryId);
+    if (idx < 0 || idx >= settingsCategories.length - 1) return;
+    const newOrder = settingsCategories.map((c) => c.id);
+    [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
+    reorderCategories(settingsListId, newOrder);
   };
 
   if (isLoading) {
@@ -163,41 +259,40 @@ export default function TodoScreen() {
       >
         {activeList ? (
           <>
-            {!hasAnyTasks ? (
+            {/* Render each category section (even when empty for drag-drop targets) */}
+            {categories.map((category) => {
+              const categoryTasks = tasksByCategory.get(category.id) ?? [];
+              return (
+                <CategorySection
+                  key={category.id}
+                  category={category}
+                  tasks={categoryTasks}
+                  subtasksByParent={subtasksByParent}
+                  onToggleTask={toggleTask}
+                  onPressTask={handlePressTask}
+                />
+              );
+            })}
+
+            {/* Uncategorized section at bottom */}
+            {uncategorizedTasks.length > 0 && (
+              <CategorySection
+                category={null}
+                tasks={uncategorizedTasks}
+                subtasksByParent={subtasksByParent}
+                onToggleTask={toggleTask}
+                onPressTask={handlePressTask}
+              />
+            )}
+
+            {/* Empty state only when no categories and no tasks */}
+            {categories.length === 0 && !hasAnyTasks && (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateText}>No tasks yet</Text>
                 <Text style={styles.emptyStateHint}>
                   Add your first task below
                 </Text>
               </View>
-            ) : (
-              <>
-                {/* Render each category section */}
-                {categories.map((category) => {
-                  const categoryTasks = tasksByCategory.get(category.id) ?? [];
-                  return (
-                    <CategorySection
-                      key={category.id}
-                      category={category}
-                      tasks={categoryTasks}
-                      subtasksByParent={subtasksByParent}
-                      onToggleTask={toggleTask}
-                      onPressTask={handlePressTask}
-                    />
-                  );
-                })}
-
-                {/* Uncategorized section at bottom */}
-                {uncategorizedTasks.length > 0 && (
-                  <CategorySection
-                    category={null}
-                    tasks={uncategorizedTasks}
-                    subtasksByParent={subtasksByParent}
-                    onToggleTask={toggleTask}
-                    onPressTask={handlePressTask}
-                  />
-                )}
-              </>
             )}
           </>
         ) : (
@@ -264,6 +359,208 @@ export default function TodoScreen() {
                     <Text style={styles.settingsOptionText}>Rename List</Text>
                   </Pressable>
                 )}
+
+                {/* Categories Section */}
+                <View style={styles.categoriesSection}>
+                  <Text style={styles.categoriesSectionTitle}>CATEGORIES</Text>
+
+                  {settingsCategories.map((category, index) => {
+                    const isFirst = index === 0;
+                    const isLast = index === settingsCategories.length - 1;
+                    const isEditing = editingCategoryId === category.id;
+                    const isDeleting = deletingCategoryId === category.id;
+                    const taskCount = taskCountByCategory[category.id] || 0;
+
+                    if (isDeleting) {
+                      return (
+                        <View key={category.id} style={styles.categoryRow}>
+                          <View style={styles.categoryDeleteConfirm}>
+                            <Text style={styles.categoryDeleteText}>
+                              Delete "{category.name}"?
+                              {taskCount > 0 &&
+                                ` ${taskCount} task${taskCount !== 1 ? "s" : ""} will move to Uncategorized.`}
+                            </Text>
+                            <View style={styles.categoryDeleteButtons}>
+                              <Pressable
+                                style={styles.categoryDeleteCancel}
+                                onPress={() => setDeletingCategoryId(null)}
+                              >
+                                <Text style={styles.categoryDeleteCancelText}>
+                                  Cancel
+                                </Text>
+                              </Pressable>
+                              <Pressable
+                                style={styles.categoryDeleteConfirmBtn}
+                                onPress={() =>
+                                  handleDeleteCategory(category.id)
+                                }
+                              >
+                                <Text
+                                  style={styles.categoryDeleteConfirmBtnText}
+                                >
+                                  Delete
+                                </Text>
+                              </Pressable>
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    }
+
+                    if (isEditing) {
+                      return (
+                        <View key={category.id} style={styles.categoryRow}>
+                          <TextInput
+                            style={styles.categoryEditInput}
+                            value={editCategoryValue}
+                            onChangeText={setEditCategoryValue}
+                            autoFocus
+                            onSubmitEditing={handleSaveCategory}
+                            returnKeyType="done"
+                          />
+                          <View style={styles.categoryEditButtons}>
+                            <Pressable
+                              style={styles.categoryActionBtn}
+                              onPress={handleCancelEditCategory}
+                            >
+                              <Text style={styles.categoryActionBtnText}>
+                                Cancel
+                              </Text>
+                            </Pressable>
+                            <Pressable
+                              style={[
+                                styles.categoryActionBtn,
+                                styles.categorySaveBtn,
+                                !editCategoryValue.trim() &&
+                                  styles.categoryBtnDisabled,
+                              ]}
+                              onPress={handleSaveCategory}
+                              disabled={!editCategoryValue.trim()}
+                            >
+                              <Text style={styles.categorySaveBtnText}>
+                                Save
+                              </Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      );
+                    }
+
+                    return (
+                      <View key={category.id} style={styles.categoryRow}>
+                        <Text
+                          style={styles.categoryName}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {category.name}
+                        </Text>
+                        <View style={styles.categoryActions}>
+                          <Pressable
+                            style={[
+                              styles.categoryArrowBtn,
+                              isFirst && styles.categoryBtnDisabled,
+                            ]}
+                            onPress={() => handleMoveCategoryUp(category.id)}
+                            disabled={isFirst}
+                          >
+                            <Text
+                              style={[
+                                styles.categoryArrowText,
+                                isFirst && styles.categoryArrowDisabled,
+                              ]}
+                            >
+                              ↑
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.categoryArrowBtn,
+                              isLast && styles.categoryBtnDisabled,
+                            ]}
+                            onPress={() => handleMoveCategoryDown(category.id)}
+                            disabled={isLast}
+                          >
+                            <Text
+                              style={[
+                                styles.categoryArrowText,
+                                isLast && styles.categoryArrowDisabled,
+                              ]}
+                            >
+                              ↓
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={styles.categoryIconBtn}
+                            onPress={() =>
+                              handleStartEditCategory(
+                                category.id,
+                                category.name,
+                              )
+                            }
+                          >
+                            <Text style={styles.categoryIconText}>✏️</Text>
+                          </Pressable>
+                          <Pressable
+                            style={styles.categoryIconBtn}
+                            onPress={() => setDeletingCategoryId(category.id)}
+                          >
+                            <Text style={styles.categoryIconText}>🗑️</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    );
+                  })}
+
+                  {/* Add Category */}
+                  {isAddingCategory ? (
+                    <View style={styles.addCategoryContainer}>
+                      <TextInput
+                        style={styles.addCategoryInput}
+                        value={newCategoryName}
+                        onChangeText={setNewCategoryName}
+                        placeholder="Category name..."
+                        autoFocus
+                        onSubmitEditing={handleAddCategory}
+                        returnKeyType="done"
+                      />
+                      <View style={styles.addCategoryButtons}>
+                        <Pressable
+                          style={styles.categoryActionBtn}
+                          onPress={() => {
+                            setIsAddingCategory(false);
+                            setNewCategoryName("");
+                          }}
+                        >
+                          <Text style={styles.categoryActionBtnText}>
+                            Cancel
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          style={[
+                            styles.categoryActionBtn,
+                            styles.categorySaveBtn,
+                            !newCategoryName.trim() &&
+                              styles.categoryBtnDisabled,
+                          ]}
+                          onPress={handleAddCategory}
+                          disabled={!newCategoryName.trim()}
+                        >
+                          <Text style={styles.categorySaveBtnText}>Add</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ) : (
+                    <Pressable
+                      style={styles.addCategoryBtn}
+                      onPress={() => setIsAddingCategory(true)}
+                    >
+                      <Text style={styles.addCategoryBtnText}>
+                        + Add Category
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
 
                 {/* Delete Option */}
                 <Pressable
@@ -586,5 +883,167 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#fff",
+  },
+  // Category management styles
+  categoriesSection: {
+    marginBottom: 16,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+  },
+  categoriesSectionTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#888",
+    letterSpacing: 0.5,
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  categoryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8f8f8",
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    minHeight: 44,
+  },
+  categoryName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#333",
+  },
+  categoryActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  categoryArrowBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 6,
+    backgroundColor: "#e8e8e8",
+  },
+  categoryArrowText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+  },
+  categoryArrowDisabled: {
+    color: "#ccc",
+  },
+  categoryIconBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  categoryIconText: {
+    fontSize: 14,
+  },
+  categoryBtnDisabled: {
+    opacity: 0.4,
+  },
+  categoryEditInput: {
+    flex: 1,
+    height: 36,
+    paddingHorizontal: 10,
+    backgroundColor: "#fff",
+    borderRadius: 6,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: "#007AFF",
+  },
+  categoryEditButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 8,
+    gap: 6,
+  },
+  categoryActionBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  categoryActionBtnText: {
+    fontSize: 14,
+    color: "#666",
+  },
+  categorySaveBtn: {
+    backgroundColor: "#007AFF",
+  },
+  categorySaveBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  categoryDeleteConfirm: {
+    flex: 1,
+  },
+  categoryDeleteText: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 8,
+  },
+  categoryDeleteButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  categoryDeleteCancel: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: "#e8e8e8",
+  },
+  categoryDeleteCancelText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  categoryDeleteConfirmBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: "#cc0000",
+  },
+  categoryDeleteConfirmBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  addCategoryContainer: {
+    marginTop: 4,
+  },
+  addCategoryInput: {
+    height: 40,
+    paddingHorizontal: 12,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: "#007AFF",
+    marginBottom: 8,
+  },
+  addCategoryButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  addCategoryBtn: {
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderStyle: "dashed",
+  },
+  addCategoryBtnText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#007AFF",
   },
 });

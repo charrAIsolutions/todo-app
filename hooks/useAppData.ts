@@ -188,6 +188,16 @@ export function useAppData() {
     [dispatch],
   );
 
+  const reorderCategories = useCallback(
+    (listId: string, categoryIds: string[]) => {
+      dispatch({
+        type: "REORDER_CATEGORIES",
+        payload: { listId, categoryIds },
+      });
+    },
+    [dispatch],
+  );
+
   // ---------------------------------------------------------------------------
   // Action Dispatchers: Tasks
   // ---------------------------------------------------------------------------
@@ -276,6 +286,7 @@ export function useAppData() {
     addCategory,
     updateCategory,
     deleteCategory,
+    reorderCategories,
 
     // Task actions
     addTask,
