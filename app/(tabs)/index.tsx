@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   StyleSheet,
   View,
@@ -16,6 +16,8 @@ import { useAppData } from "@/hooks/useAppData";
 import { ListTabBar } from "@/components/ListTabBar";
 import { AddTaskInput } from "@/components/AddTaskInput";
 import { CategorySection } from "@/components/CategorySection";
+import { DragProvider } from "@/components/drag";
+import type { DragEndEvent } from "@/types";
 
 /**
  * Main todo list screen.
@@ -40,7 +42,10 @@ export default function TodoScreen() {
     deleteCategory,
     reorderCategories,
     addTask,
+    updateTask,
     toggleTask,
+    moveTask,
+    nestTask,
   } = useAppData();
 
   const [isCreatingList, setIsCreatingList] = useState(false);
@@ -106,10 +111,11 @@ export default function TodoScreen() {
     }
   };
 
-  const handleOpenListSettings = (listId: string) => {
-    const list = lists.find((l) => l.id === listId);
+  const handleOpenSettings = () => {
+    if (!activeListId) return;
+    const list = lists.find((l) => l.id === activeListId);
     if (list) {
-      setSettingsListId(listId);
+      setSettingsListId(activeListId);
       setRenameValue(list.name);
       setIsRenaming(false);
       setShowDeleteConfirm(false);
@@ -146,6 +152,88 @@ export default function TodoScreen() {
   const handlePressTask = (taskId: string) => {
     router.push(`/task/${taskId}`);
   };
+
+  // ---------------------------------------------------------------------------
+  // Drag-and-Drop Handler
+  // ---------------------------------------------------------------------------
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { task, dropZone } = event;
+
+      switch (dropZone.type) {
+        case "reorder":
+        case "move-category": {
+          // Determine if we're reordering subtasks or top-level tasks
+          const isSubtaskReorder = dropZone.parentTaskId !== null;
+
+          // Get sibling tasks (either subtasks of same parent, or top-level in same category)
+          const targetTasks = tasks.filter((t) => {
+            if (t.listId !== task.listId) return false;
+            if (t.id === task.id) return false;
+
+            if (isSubtaskReorder) {
+              // Reordering among subtasks of the same parent
+              return t.parentTaskId === dropZone.parentTaskId;
+            } else {
+              // Reordering top-level tasks in a category
+              return (
+                t.categoryId === dropZone.categoryId && t.parentTaskId === null
+              );
+            }
+          });
+          targetTasks.sort((a, b) => a.sortOrder - b.sortOrder);
+
+          let newSortOrder: number;
+          if (dropZone.beforeTaskId) {
+            const beforeIndex = targetTasks.findIndex(
+              (t) => t.id === dropZone.beforeTaskId,
+            );
+            if (beforeIndex === 0) {
+              newSortOrder = targetTasks[0].sortOrder - 1;
+            } else if (beforeIndex > 0) {
+              const prev = targetTasks[beforeIndex - 1];
+              const next = targetTasks[beforeIndex];
+              newSortOrder = (prev.sortOrder + next.sortOrder) / 2;
+            } else {
+              // beforeTaskId not found, insert at end
+              newSortOrder =
+                targetTasks.length > 0
+                  ? targetTasks[targetTasks.length - 1].sortOrder + 1
+                  : 0;
+            }
+          } else {
+            // Insert at end
+            newSortOrder =
+              targetTasks.length > 0
+                ? targetTasks[targetTasks.length - 1].sortOrder + 1
+                : 0;
+          }
+
+          if (isSubtaskReorder) {
+            // Just update sort order for subtask reordering
+            updateTask(task.id, { sortOrder: newSortOrder });
+          } else {
+            // Move task to new category with new sort order
+            moveTask(task.id, dropZone.categoryId, newSortOrder);
+          }
+          break;
+        }
+
+        case "nest": {
+          if (dropZone.parentTaskId) {
+            nestTask(task.id, dropZone.parentTaskId);
+          }
+          break;
+        }
+
+        case "unnest": {
+          nestTask(task.id, null);
+          break;
+        }
+      }
+    },
+    [tasks, moveTask, nestTask, updateTask],
+  );
 
   // ---------------------------------------------------------------------------
   // Category Management Handlers
@@ -231,7 +319,7 @@ export default function TodoScreen() {
         activeListId={activeListId}
         onSelectList={setActiveList}
         onAddList={handleAddList}
-        onOpenListSettings={handleOpenListSettings}
+        onOpenSettings={handleOpenSettings}
       />
 
       {/* New List Input (shown when creating) */}
@@ -252,58 +340,64 @@ export default function TodoScreen() {
         </View>
       )}
 
-      {/* Task List */}
-      <ScrollView
-        style={styles.taskList}
-        contentContainerStyle={styles.taskListContent}
-      >
-        {activeList ? (
-          <>
-            {/* Render each category section (even when empty for drag-drop targets) */}
-            {categories.map((category) => {
-              const categoryTasks = tasksByCategory.get(category.id) ?? [];
-              return (
+      {/* Task List with Drag-and-Drop */}
+      <DragProvider onDragEnd={handleDragEnd}>
+        <ScrollView
+          style={styles.taskList}
+          contentContainerStyle={styles.taskListContent}
+        >
+          {activeList ? (
+            <>
+              {/* Render each category section (even when empty for drag-drop targets) */}
+              {categories.map((category) => {
+                const categoryTasks = tasksByCategory.get(category.id) ?? [];
+                return (
+                  <CategorySection
+                    key={category.id}
+                    category={category}
+                    listId={activeListId!}
+                    tasks={categoryTasks}
+                    subtasksByParent={subtasksByParent}
+                    onToggleTask={toggleTask}
+                    onPressTask={handlePressTask}
+                    dragEnabled
+                  />
+                );
+              })}
+
+              {/* Uncategorized section at bottom */}
+              {uncategorizedTasks.length > 0 && (
                 <CategorySection
-                  key={category.id}
-                  category={category}
-                  tasks={categoryTasks}
+                  category={null}
+                  listId={activeListId!}
+                  tasks={uncategorizedTasks}
                   subtasksByParent={subtasksByParent}
                   onToggleTask={toggleTask}
                   onPressTask={handlePressTask}
+                  dragEnabled
                 />
-              );
-            })}
+              )}
 
-            {/* Uncategorized section at bottom */}
-            {uncategorizedTasks.length > 0 && (
-              <CategorySection
-                category={null}
-                tasks={uncategorizedTasks}
-                subtasksByParent={subtasksByParent}
-                onToggleTask={toggleTask}
-                onPressTask={handlePressTask}
-              />
-            )}
-
-            {/* Empty state only when no categories and no tasks */}
-            {categories.length === 0 && !hasAnyTasks && (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>No tasks yet</Text>
-                <Text style={styles.emptyStateHint}>
-                  Add your first task below
-                </Text>
-              </View>
-            )}
-          </>
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No list selected</Text>
-            <Text style={styles.emptyStateHint}>
-              Create a list using the + button above
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+              {/* Empty state only when no categories and no tasks */}
+              {categories.length === 0 && !hasAnyTasks && (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateText}>No tasks yet</Text>
+                  <Text style={styles.emptyStateHint}>
+                    Add your first task below
+                  </Text>
+                </View>
+              )}
+            </>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No list selected</Text>
+              <Text style={styles.emptyStateHint}>
+                Create a list using the + button above
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      </DragProvider>
 
       {/* Add Task Input */}
       {activeListId && <AddTaskInput onAddTask={handleAddTask} />}

@@ -8,7 +8,7 @@ interface ListTabBarProps {
   activeListId: string | null;
   onSelectList: (listId: string) => void;
   onAddList: () => void;
-  onOpenListSettings?: (listId: string) => void;
+  onOpenSettings?: () => void;
 }
 
 /**
@@ -20,7 +20,7 @@ export function ListTabBar({
   activeListId,
   onSelectList,
   onAddList,
-  onOpenListSettings,
+  onOpenSettings,
 }: ListTabBarProps) {
   // Sort lists by sortOrder
   const sortedLists = [...lists].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -31,6 +31,7 @@ export function ListTabBar({
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        style={styles.scrollView}
       >
         {sortedLists.map((list) => (
           <ListTab
@@ -38,7 +39,6 @@ export function ListTabBar({
             name={list.name}
             isActive={list.id === activeListId}
             onPress={() => onSelectList(list.id)}
-            onLongPress={() => onOpenListSettings?.(list.id)}
           />
         ))}
 
@@ -53,15 +53,33 @@ export function ListTabBar({
           <FontAwesome name="plus" size={16} color="#007AFF" />
         </Pressable>
       </ScrollView>
+
+      {/* Settings Button - always visible on right */}
+      {activeListId && (
+        <Pressable
+          onPress={onOpenSettings}
+          style={({ pressed }) => [
+            styles.settingsButton,
+            pressed && styles.settingsButtonPressed,
+          ]}
+        >
+          <FontAwesome name="ellipsis-h" size={18} color="#666" />
+        </Pressable>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flexDirection: "row",
+    alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
     backgroundColor: "#f8f8f8",
+  },
+  scrollView: {
+    flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 12,
@@ -79,5 +97,15 @@ const styles = StyleSheet.create({
   },
   addButtonPressed: {
     opacity: 0.7,
+  },
+  settingsButton: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 4,
+  },
+  settingsButtonPressed: {
+    opacity: 0.5,
   },
 });

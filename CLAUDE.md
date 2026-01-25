@@ -247,17 +247,13 @@ interface Task {
 
 ### Pre-Phase 5: UX Planning ✓
 
-- Added hover-reveal settings icon on web (ellipsis-v)
-- Increased double-click delay from 300ms to 400ms
-- Added `userSelect: none` to prevent text selection on double-click
-- Icon uses opacity toggle to maintain stable layout
+- Settings button ("...") in tab bar for quick access
+- `userSelect: none` on tabs to prevent text selection
 
 **Working:**
 
-- ✅ Hover over tab shows settings icon (web only)
-- ✅ Click icon opens list settings without selecting tab
-- ✅ Double-click still works as power-user shortcut
-- ✅ Long-press works on mobile (no icon clutter)
+- ✅ Settings button opens list settings modal
+- ✅ Long-press works on mobile
 
 ### Phase 5: Move & Reorder (Tap-based) ✓
 
@@ -275,19 +271,30 @@ interface Task {
 - ✅ Position section only shows when multiple siblings exist
 - ✅ Up/down buttons disable appropriately at boundaries
 
+### Phase 6: Drag-and-Drop ✓
+
+- Custom drag-drop using react-native-gesture-handler + Reanimated
+- `components/drag/DragProvider.tsx` - Context for drag state + layout registry
+- `components/drag/DraggableTask.tsx` - Wraps TaskItem with pan gesture + animations
+- `components/drag/DropIndicator.tsx` - Visual drop target indicators
+- `components/drag/useDragDrop.ts` - Hooks for drag state and layout registration
+- `types/drag.ts` - Type definitions for drag system
+- `app/_layout.tsx` - Wrapped with GestureHandlerRootView
+
+**Working:**
+
+- ✅ Drag tasks to reorder within a category
+- ✅ Drag tasks between categories (drop position determines new category)
+- ✅ Drag onto a task to nest as subtask
+- ✅ Drag subtask left to unnest back to top-level
+- ✅ Reorder subtasks within parent
+- ✅ Haptic feedback on drag start/drop (native only)
+- ✅ Visual lift effect and drop indicators
+- ✅ Works on web, iOS, and Android
+
 ## Phases
 
-### Phase 6: Drag-and-Drop (Future)
-
-**Goal:** Full drag-drop experience (deferred)
-
-**Dependencies:** react-native-gesture-handler, react-native-draggable-flatlist
-
-**Scope:**
-
-- Reorder within category by dragging
-- Drop on category header to move
-- Drop on task to nest as subtask
+(All phases complete)
 
 ## Notes
 
