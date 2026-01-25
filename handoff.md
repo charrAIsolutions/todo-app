@@ -1,7 +1,7 @@
 # Handoff Document
 
 **Last Updated:** January 2026
-**Last Session:** Completed Phase 5 (Tap-based Task Reordering)
+**Last Session:** Completed Phase 6 (Drag-and-Drop)
 
 ## Quick Start
 
@@ -14,39 +14,49 @@ App runs at http://localhost:8081 (or 8082 if 8081 is in use).
 
 ## Current State
 
-The app is a functional multi-list todo application with:
+The app is a fully functional multi-list todo application with:
 
 - Multiple todo lists (tabs at top)
 - Tasks grouped by category within each list
 - Subtasks (one level deep)
 - Task detail modal for editing
-- List settings for rename/delete
-- Task reordering and nesting via tap-based controls
+- List settings modal with category management
+- Task reordering via tap-based controls OR drag-and-drop
+- Drag-and-drop for reordering, moving between categories, and nesting
 - Data persists to AsyncStorage
 
-**What works:**
+**All planned phases are complete.**
+
+### What works:
 
 - Create new lists via "+" button (with default Now/Next/Later categories)
 - Switch between lists by tapping tabs
-- Hover over tab to reveal settings icon (web), or long-press (mobile)
-- Double-click tab also opens list settings (power-user shortcut)
+- Settings button ("...") in tab bar opens list settings
 - Rename and delete lists (delete has high-visibility warning)
+- **Category CRUD**: Add, rename, delete, reorder categories in list settings
 - Add tasks via input at bottom
 - Toggle task completion by tapping the checkbox
 - Tap task to open detail modal
 - Edit task title and change category
-- **Reorder tasks** within category using up/down arrows
-- **Nest tasks** as subtasks via "Make Subtask Of" picker
+- **Reorder tasks** within category using up/down arrows (in detail modal)
+- **Nest tasks** as subtasks via "Make Subtask Of" picker (in detail modal)
 - **Unnest subtasks** back to top-level via "Convert to Top-Level Task" button
+- **Drag-and-drop**: Drag tasks to reorder within category
+- **Drag-and-drop**: Drag tasks between categories (drop position determines target)
+- **Drag-and-drop**: Drag onto a task to nest as subtask
+- **Drag-and-drop**: Drag subtask left to unnest to top-level
 - Add/toggle/delete subtasks
 - Delete tasks with confirmation
 - Data persists across refreshes
 - Active list persists (navigating back from task detail stays on correct list)
+- Haptic feedback on drag (native only)
 
-**What's not built yet:**
+### What's not built yet:
 
-- Category CRUD (add/edit/delete categories within a list)
-- Drag-and-drop reordering (using gesture libraries)
+- Completed task styling (strikethrough, muted colors)
+- Due dates / reminders
+- Search / filter
+- iOS App Store deployment
 
 ## Architecture Overview
 
@@ -60,19 +70,25 @@ User Action → useAppData hook → dispatch(action) → AppContext reducer → 
 
 ### Key Files
 
-| File                             | Purpose                                          |
-| -------------------------------- | ------------------------------------------------ |
-| `types/todo.ts`                  | Data model: TodoList, Category, Task             |
-| `store/AppContext.tsx`           | React Context + useReducer (15+ actions)         |
-| `hooks/useAppData.ts`            | Main hook - selectors, actions, auto-persistence |
-| `lib/storage.ts`                 | AsyncStorage wrapper + migration logic           |
-| `app/(tabs)/index.tsx`           | Main todo screen with list settings modal        |
-| `app/task/[id].tsx`              | Task detail modal (edit, reorder, nest/unnest)   |
-| `components/ListTabBar.tsx`      | List tab navigation                              |
-| `components/ListTab.tsx`         | Individual tab with hover/double-click detection |
-| `components/CategorySection.tsx` | Category header + tasks                          |
-| `components/TaskItem.tsx`        | Task row with checkbox and indentation           |
-| `components/AddTaskInput.tsx`    | Task input field                                 |
+| File                                | Purpose                                          |
+| ----------------------------------- | ------------------------------------------------ |
+| `types/todo.ts`                     | Data model: TodoList, Category, Task             |
+| `types/drag.ts`                     | Drag-and-drop type definitions                   |
+| `store/AppContext.tsx`              | React Context + useReducer (15+ actions)         |
+| `hooks/useAppData.ts`               | Main hook - selectors, actions, auto-persistence |
+| `lib/storage.ts`                    | AsyncStorage wrapper + migration logic           |
+| `app/_layout.tsx`                   | Root layout with GestureHandlerRootView          |
+| `app/(tabs)/index.tsx`              | Main todo screen with list settings modal        |
+| `app/task/[id].tsx`                 | Task detail modal (edit, reorder, nest/unnest)   |
+| `components/ListTabBar.tsx`         | List tab navigation with settings button         |
+| `components/ListTab.tsx`            | Individual tab button                            |
+| `components/CategorySection.tsx`    | Category header + tasks (static or draggable)    |
+| `components/TaskItem.tsx`           | Task row with checkbox and indentation           |
+| `components/AddTaskInput.tsx`       | Task input field                                 |
+| `components/drag/DragProvider.tsx`  | Drag context, state, layout registry             |
+| `components/drag/DraggableTask.tsx` | Task wrapper with pan gesture + animations       |
+| `components/drag/DropIndicator.tsx` | Visual drop target indicators                    |
+| `components/drag/useDragDrop.ts`    | Hooks for drag state and layout registration     |
 
 ### State Shape
 
@@ -95,33 +111,28 @@ User Action → useAppData hook → dispatch(action) → AppContext reducer → 
 ### Available Dispatchers (useAppData hook)
 
 **Lists:** addList, updateList, deleteList, setActiveList
-**Categories:** addCategory, updateCategory, deleteCategory
+**Categories:** addCategory, updateCategory, deleteCategory, reorderCategories
 **Tasks:** addTask, updateTask, deleteTask, toggleTask, moveTask, nestTask, reorderTasks
 
 ## Next Steps (Priority Order)
 
-### 1. List Settings Enhancement
-
-Add category CRUD to list settings:
-
-- Add new category
-- Rename category
-- Delete category (moves tasks to uncategorized)
-- Reorder categories
-
-### 2. Phase 6: Drag-and-Drop (Future)
-
-Requires: `react-native-gesture-handler`, `react-native-draggable-flatlist`
-
-- Reorder within category by dragging
-- Drop on category header to move
-- Drop on task to nest as subtask
-
-### 3. UI Polish
+### 1. UI Polish
 
 - Completed task styling (strikethrough, muted colors)
 - Empty state messages
 - Loading skeletons
+- Better visual feedback during drag
+
+### 2. Additional Features
+
+- Due dates / reminders
+- Search / filter tasks
+- Keyboard shortcuts (web)
+
+### 3. Deployment
+
+- iOS App Store build and submission
+- Android Play Store (optional)
 
 ## Known Issues / Tech Debt
 
@@ -133,6 +144,8 @@ Requires: `react-native-gesture-handler`, `react-native-draggable-flatlist`
 
 4. **Unused "Tab Two"** - The Expo template's second tab still exists at `app/(tabs)/two.tsx`. Can be removed or repurposed.
 
+5. **Drag visual polish** - The dragged task visual could be sharper/more polished. Functional but not perfect.
+
 ## Testing Checklist
 
 When making changes, verify:
@@ -141,9 +154,9 @@ When making changes, verify:
 - [ ] App loads on web without errors
 - [ ] Creating a new list works (gets default categories)
 - [ ] Switching lists works
-- [ ] Hover shows settings icon (web)
-- [ ] Double-click opens list settings
+- [ ] Settings button ("...") opens list settings
 - [ ] Rename and delete list work
+- [ ] **Category CRUD**: Add, rename, delete, reorder categories
 - [ ] Adding tasks works
 - [ ] Toggling tasks works
 - [ ] Tapping task opens detail modal
@@ -151,6 +164,10 @@ When making changes, verify:
 - [ ] **Reordering tasks** with up/down arrows works
 - [ ] **Nesting tasks** via "Make Subtask Of" works
 - [ ] **Unnesting subtasks** via "Convert to Top-Level Task" works
+- [ ] **Drag to reorder** within category works
+- [ ] **Drag between categories** moves task to new category
+- [ ] **Drag onto task** nests as subtask
+- [ ] **Drag subtask left** unnests to top-level
 - [ ] Adding subtasks works
 - [ ] Deleting tasks works
 - [ ] Data persists after refresh
@@ -162,7 +179,7 @@ When making changes, verify:
 - **Components:** Named exports, Props interface as `{Name}Props`
 - **Styling:** StyleSheet.create() with styles at bottom of file
 - **State:** All state changes through useAppData hook actions
-- **Platform detection:** Use `Platform.OS === "web"` for web-specific code (e.g., window.confirm vs Alert.alert)
+- **Platform detection:** Use `Platform.OS === "web"` for web-specific code
 
 ## Important Implementation Details
 
@@ -172,21 +189,31 @@ Data automatically saves to AsyncStorage whenever `state.lists`, `state.tasks`, 
 
 ### Active List Persistence
 
-The `activeListId` is now persisted separately. When the app loads, it restores the last active list. If that list was deleted, it falls back to the first list. This ensures navigating back from task detail stays on the correct list.
+The `activeListId` is persisted separately. When the app loads, it restores the last active list. If that list was deleted, it falls back to the first list.
 
-### Double-Click Detection
+### Drag-and-Drop System
 
-`ListTab.tsx` implements double-click detection using a ref to track last click time. If two clicks occur within 400ms, it triggers `onLongPress` (settings). Otherwise, it's a single click (select list). On web, a hover-reveal settings icon provides easier access.
+The drag system uses react-native-gesture-handler + Reanimated:
 
-### Task Reordering (Phase 5)
+- **DragProvider**: Wraps the task list, provides drag context and layout registry
+- **DraggableTask**: Wraps TaskItem with pan gesture, handles animation
+- **DropIndicator**: Shows blue line where task will be inserted
+- **calculateDropZone**: Pure function that determines drop target based on cursor position
+
+Key behaviors:
+
+- Drag activates after 10px movement (prevents conflicts with taps)
+- Categories are filtered by listId (prevents cross-list issues)
+- Haptic feedback on native (expo-haptics)
+- Visual lift effect (scale 1.05, shadow)
+
+### Task Reordering
 
 `REORDER_TASKS` action accepts:
 
 - `taskIds`: New order of task IDs
 - `categoryId`: For top-level tasks (filter by category)
 - `parentTaskId`: For subtasks (filter by parent)
-
-The reducer updates `sortOrder` for all affected tasks in one operation.
 
 ### Nesting/Unnesting Tasks
 
@@ -199,26 +226,13 @@ When nesting, the task inherits the parent's categoryId.
 
 ### Platform-Specific Dialogs
 
-- **Web:** Uses `window.confirm()` and `window.prompt()` for dialogs
+- **Web:** Uses `window.confirm()` for dialogs
 - **Native:** Uses React Native's `Alert.alert()`
-
-Check `Platform.OS === "web"` before using browser APIs.
-
-### Migration Logic
-
-On first load, `lib/storage.ts` checks for legacy data (old `todos` key) and migrates it to the new multi-list structure. Safe to run multiple times - only migrates if new data doesn't exist.
 
 ### Default List/Categories
 
-- New lists get default Now/Next/Later categories (not empty)
+- New lists get default Now/Next/Later categories
 - If no lists exist on load, a "General" list is auto-created
-
-### Expo Router Conventions
-
-- Screens go in `app/` folder
-- Dynamic routes use `[param].tsx` syntax (e.g., `app/task/[id].tsx`)
-- Modals: Add to Stack in `app/_layout.tsx` with `presentation: "modal"`
-- Tab screens go in `app/(tabs)/`
 
 ### Clearing Storage (for testing)
 
@@ -228,16 +242,9 @@ In browser dev tools console:
 localStorage.clear(); // Then refresh
 ```
 
-Or add a dev button that calls:
-
-```typescript
-import { storage } from "@/lib/storage";
-await storage.clearAll();
-```
-
 ## Code Formatting
 
-A Prettier PostToolUse hook is configured that auto-formats files on save. Uses double quotes and standard Prettier defaults.
+A Prettier PostToolUse hook is configured that auto-formats files on save.
 
 ## Questions?
 

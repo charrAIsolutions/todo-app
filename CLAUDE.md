@@ -173,12 +173,12 @@ interface Task {
 - `app/_layout.tsx` - Wrapped with AppProvider
 - Default "General" list with Now/Next/Later categories on first launch
 
-### Phase 2: Multi-List Tabs ✓ (partial)
+### Phase 2: Multi-List Tabs ✓
 
-- `components/ListTabBar.tsx` - Horizontal scrollable tabs
+- `components/ListTabBar.tsx` - Horizontal scrollable tabs with settings button
 - `components/ListTab.tsx` - Individual tab button
 - `components/AddTaskInput.tsx` - Input for adding new tasks
-- `app/(tabs)/index.tsx` - Main todo screen with list tabs, task list, add input
+- `app/(tabs)/index.tsx` - Main todo screen with list tabs, task list, add input, list settings modal
 - Updated tab layout: renamed to "Tasks" with list icon
 
 **Working:**
@@ -188,10 +188,7 @@ interface Task {
 - ✅ "+" button creates a new list
 - ✅ Add tasks to a list
 - ✅ Toggle task completion
-
-**Remaining:**
-
-- ⏳ `app/list-settings/[id].tsx` - List settings modal (rename list, manage categories)
+- ✅ List settings modal with rename, delete, category management
 
 ### Phase 3: Categories ✓
 
@@ -199,6 +196,7 @@ interface Task {
 - `components/CategoryHeader.tsx` - Bold header with background and task count
 - `components/CategorySection.tsx` - Groups header + tasks for a category
 - Updated `app/(tabs)/index.tsx` to display tasks grouped by category
+- Category CRUD in list settings modal (add, rename, delete, reorder)
 
 **Working:**
 
@@ -207,10 +205,7 @@ interface Task {
 - ✅ Uncategorized tasks appear at bottom with dashed border
 - ✅ Tasks slightly indented from category headers
 - ✅ Subtasks render with deeper indentation
-
-**Remaining:**
-
-- ⏳ Category CRUD in list settings (deferred to list-settings modal)
+- ✅ Add/rename/delete/reorder categories in list settings
 
 ### Phase 4: Task Detail & Subtasks ✓
 
@@ -231,7 +226,7 @@ interface Task {
 
 ### Phase 4.5: List Management & Navigation ✓
 
-- List settings modal (double-click on web, long-press on mobile)
+- List settings modal (via "..." button in tab bar)
 - Rename list functionality
 - Delete list with high-visibility warning (red danger zone, shows task count)
 - Active list ID now persists to storage
@@ -239,21 +234,11 @@ interface Task {
 
 **Working:**
 
-- ✅ Double-click or long-press opens list settings
+- ✅ Settings button ("...") opens list settings modal
 - ✅ Rename list inline
 - ✅ Delete list with alarming confirmation
 - ✅ Active list persists across refreshes
 - ✅ Back navigation stays on correct list
-
-### Pre-Phase 5: UX Planning ✓
-
-- Settings button ("...") in tab bar for quick access
-- `userSelect: none` on tabs to prevent text selection
-
-**Working:**
-
-- ✅ Settings button opens list settings modal
-- ✅ Long-press works on mobile
 
 ### Phase 5: Move & Reorder (Tap-based) ✓
 
