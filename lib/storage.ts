@@ -123,6 +123,7 @@ export async function migrateFromLegacy(): Promise<{
       { id: generateId(), name: "Next", sortOrder: 1 },
       { id: generateId(), name: "Later", sortOrder: 2 },
     ],
+    showOnOpen: true,
     createdAt: nowISO(),
   };
 
@@ -187,6 +188,7 @@ export async function loadAppData(): Promise<{
         { id: generateId(), name: "Next", sortOrder: 1 },
         { id: generateId(), name: "Later", sortOrder: 2 },
       ],
+      showOnOpen: true,
       createdAt: nowISO(),
     };
     await storage.setLists([defaultList]);
@@ -194,9 +196,14 @@ export async function loadAppData(): Promise<{
   }
 
   // Validate that savedActiveListId still exists, otherwise use first list
-  const activeListId = lists.some((l) => l.id === savedActiveListId)
-    ? savedActiveListId
-    : (lists[0]?.id ?? null);
+  const normalizedLists = lists.map((list) => ({
+    ...list,
+    showOnOpen: list.showOnOpen ?? false,
+  }));
 
-  return { lists, tasks, activeListId };
+  const activeListId = normalizedLists.some((l) => l.id === savedActiveListId)
+    ? savedActiveListId
+    : (normalizedLists[0]?.id ?? null);
+
+  return { lists: normalizedLists, tasks, activeListId };
 }

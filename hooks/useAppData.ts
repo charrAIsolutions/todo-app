@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useCallback } from "react";
+import { Platform } from "react-native";
 import { useAppContext } from "../store/AppContext";
 import { storage, loadAppData } from "../lib/storage";
 import { Task, TaskInput, ListInput, CategoryInput } from "../types/todo";
@@ -23,10 +24,25 @@ export function useAppData() {
     async function hydrate() {
       try {
         const { lists, tasks, activeListId } = await loadAppData();
+        const isWeb = Platform.OS === "web";
+        const selectedListIds = isWeb
+          ? (() => {
+              const selected = lists
+                .filter((list) => list.showOnOpen)
+                .map((list) => list.id);
+              return selected.length > 0
+                ? selected
+                : lists[0]
+                  ? [lists[0].id]
+                  : [];
+            })()
+          : activeListId
+            ? [activeListId]
+            : [];
         if (mounted) {
           dispatch({
             type: "HYDRATE",
-            payload: { lists, tasks, activeListId },
+            payload: { lists, tasks, activeListId, selectedListIds },
           });
         }
       } catch (error) {
@@ -136,6 +152,20 @@ export function useAppData() {
     [dispatch],
   );
 
+  const setSelectedLists = useCallback(
+    (listIds: string[]) => {
+      dispatch({ type: "SET_SELECTED_LISTS", payload: listIds });
+    },
+    [dispatch],
+  );
+
+  const toggleListSelection = useCallback(
+    (listId: string) => {
+      dispatch({ type: "TOGGLE_LIST_SELECTION", payload: listId });
+    },
+    [dispatch],
+  );
+
   const addList = useCallback(
     (input: ListInput) => {
       dispatch({ type: "ADD_LIST", payload: input });
@@ -144,7 +174,7 @@ export function useAppData() {
   );
 
   const updateList = useCallback(
-    (id: string, updates: { name?: string }) => {
+    (id: string, updates: { name?: string; showOnOpen?: boolean }) => {
       dispatch({ type: "UPDATE_LIST", payload: { id, updates } });
     },
     [dispatch],
@@ -268,6 +298,7 @@ export function useAppData() {
     lists: state.lists,
     tasks: state.tasks,
     activeListId: state.activeListId,
+    selectedListIds: state.selectedListIds,
     isLoading: state.isLoading,
     error: state.error,
 
@@ -278,6 +309,8 @@ export function useAppData() {
 
     // List actions
     setActiveList,
+    setSelectedLists,
+    toggleListSelection,
     addList,
     updateList,
     deleteList,

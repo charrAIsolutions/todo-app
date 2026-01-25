@@ -17,6 +17,7 @@ export interface TodoList {
   name: string;
   sortOrder: number; // For reordering list tabs
   categories: Category[]; // Ordered categories within this list
+  showOnOpen: boolean; // Whether this list should be shown on app launch (web)
   createdAt: string; // ISO date string
 }
 
@@ -57,6 +58,7 @@ export type TaskInput = Pick<Task, "title" | "listId"> &
 
 export type ListInput = Pick<TodoList, "name"> & {
   categories?: Omit<Category, "id" | "sortOrder">[];
+  showOnOpen?: boolean;
 };
 
 export type CategoryInput = Pick<Category, "name"> &
