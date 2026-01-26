@@ -308,9 +308,30 @@ interface Task {
 - Cross-list drag-and-drop (drag stays within single list)
 - Multi-list view on mobile
 
+## Current State
+
+**Done (Phases 1-7):**
+
+- Full data model with lists, categories, tasks, subtasks
+- Multi-list tabs with web split-view
+- Drag-and-drop reordering (within lists)
+- Task detail modal with all CRUD operations
+- "Show on open" for web launch preferences
+- Local storage persistence
+
+**In Progress:**
+
+- None - all planned phases complete
+
+**Next (suggested):**
+
+- Phase 8: Polish & UX improvements (animations, empty states, onboarding)
+- Phase 9: iOS App Store deployment (EAS Build, app icons, splash screens)
+- Phase 10: Cloud sync (optional - requires auth)
+
 ## Phases
 
-(All phases complete)
+(Phases 1-7 complete)
 
 ## Versioning
 
