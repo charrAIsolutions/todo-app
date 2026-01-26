@@ -385,7 +385,7 @@ export default function TodoScreen() {
     const listCategories = [...list.categories].sort(
       (a, b) => a.sortOrder - b.sortOrder,
     );
-    const paneWidth = Math.max(windowWidth / 3, 360);
+    const paneWidth = Math.max(windowWidth / 4, 360);
     const listData = listTaskData.get(listId);
     const listTasksByCategory = listData?.tasksByCategory ?? new Map();
     const listSubtasksByParent = listData?.subtasksByParent ?? new Map();
