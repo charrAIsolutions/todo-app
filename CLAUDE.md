@@ -1,5 +1,7 @@
 # Last updated: January 2026
 
+# Version: 0.0.7.2
+
 <!-- It is 2026, not 2025 -->
 
 # Todo App - Claude Code Instructions
@@ -118,6 +120,7 @@ interface TodoList {
   sortOrder: number;
   categories: Category[];
   createdAt: string;
+  showOnOpen?: boolean; // Web split-view: auto-select on launch
 }
 
 // A category within a list (e.g., "Now", "Next", "Later")
@@ -277,9 +280,71 @@ interface Task {
 - ✅ Visual lift effect and drop indicators
 - ✅ Works on web, iOS, and Android
 
+### Phase 7: Web Split-View ✓
+
+- Web-only multi-list split view for displaying multiple lists side by side
+- `hooks/useAppData.ts` - Added `selectedListIds`, `setSelectedLists`, `toggleListSelection`
+- `store/AppContext.tsx` - Added `SET_SELECTED_LISTS`, `TOGGLE_LIST_SELECTION` actions
+- `components/ListTabBar.tsx` - Updated to support multi-select on web (click adds/removes from selection)
+- `components/ListTab.tsx` - Ellipsis settings button inside tab (hover-only visibility on web)
+- `app/(tabs)/index.tsx` - Split view rendering with independent panes per selected list
+- `TodoList.showOnOpen` - New field to auto-select lists on web launch
+
+**Working:**
+
+- ✅ Web: Click unselected tab to add to split view, click selected tab to remove
+- ✅ Mobile: Single-list view only (tap replaces active list)
+- ✅ Each list pane has its own title, scrollable task view, and add-task input
+- ✅ List pane width: max(screen width / 4, 360px)
+- ✅ Horizontal scrollbar when total pane width exceeds screen
+- ✅ "Show on open" toggle in list settings modal
+- ✅ Lists with "Show on open" auto-selected on web launch
+- ✅ Selected tabs use blue active styling
+- ✅ Ellipsis appears on tab hover (web) for settings access
+- ✅ Deleting a selected list removes it from selection
+
+**Non-goals (intentional):**
+
+- Cross-list drag-and-drop (drag stays within single list)
+- Multi-list view on mobile
+
+## Current State
+
+**Done (Phases 1-7):**
+
+- Full data model with lists, categories, tasks, subtasks
+- Multi-list tabs with web split-view
+- Drag-and-drop reordering (within lists)
+- Task detail modal with all CRUD operations
+- "Show on open" for web launch preferences
+- Local storage persistence
+
+**In Progress:**
+
+- None - all planned phases complete
+
+**Next (suggested):**
+
+- Phase 8: Polish & UX improvements (animations, empty states, onboarding)
+- Phase 9: iOS App Store deployment (EAS Build, app icons, splash screens)
+- Phase 10: Cloud sync (optional - requires auth)
+
 ## Phases
 
-(All phases complete)
+(Phases 1-7 complete)
+
+## Versioning
+
+Format: `Release.PreRelease.Phase.Change`
+
+- **Release** (0): Major release version (0 = pre-release)
+- **PreRelease** (0): Stable pre-release version (0 = unstable)
+- **Phase** (7): Development phase number
+- **Change** (2): Incremental change within phase
+
+Example: `0.0.7.2` = Release 0, PreRelease 0, Phase 7, Change 2
+
+Display title shows full version (0.0.7.2), package.json uses semver (0.0.7).
 
 ## Notes
 

@@ -385,12 +385,8 @@ export default function TodoScreen() {
     const listCategories = [...list.categories].sort(
       (a, b) => a.sortOrder - b.sortOrder,
     );
-    const divisor = Math.min(4, Math.max(1, listIdsToRender.length));
-    const contentPadding = 32;
-    const columnGap = 16;
-    const availableWidth =
-      windowWidth - contentPadding - columnGap * Math.max(0, divisor - 1);
-    const paneWidth = Math.max(availableWidth / divisor, 360);
+    // Each pane should be 1/4 of screen width OR 360px, whichever is bigger
+    const paneWidth = Math.max(windowWidth / 4, 360);
     const listData = listTaskData.get(listId);
     const listTasksByCategory = listData?.tasksByCategory ?? new Map();
     const listSubtasksByParent = listData?.subtasksByParent ?? new Map();
@@ -407,8 +403,7 @@ export default function TodoScreen() {
           >
             {/* Render each category section (even when empty for drag-drop targets) */}
             {listCategories.map((category) => {
-              const categoryTasks =
-                listTasksByCategory.get(category.id) ?? [];
+              const categoryTasks = listTasksByCategory.get(category.id) ?? [];
               return (
                 <CategorySection
                   key={category.id}
@@ -490,7 +485,7 @@ export default function TodoScreen() {
       {isWeb ? (
         <ScrollView
           horizontal
-          showsHorizontalScrollIndicator={false}
+          showsHorizontalScrollIndicator
           contentContainerStyle={styles.splitViewContent}
           style={styles.splitView}
         >
@@ -517,7 +512,8 @@ export default function TodoScreen() {
                 <>
                   {/* Render each category section (even when empty for drag-drop targets) */}
                   {categories.map((category) => {
-                    const categoryTasks = tasksByCategory.get(category.id) ?? [];
+                    const categoryTasks =
+                      tasksByCategory.get(category.id) ?? [];
                     return (
                       <CategorySection
                         key={category.id}
@@ -629,9 +625,7 @@ export default function TodoScreen() {
 
                 <View style={styles.settingsToggleRow}>
                   <View>
-                    <Text style={styles.settingsToggleTitle}>
-                      Show on open
-                    </Text>
+                    <Text style={styles.settingsToggleTitle}>Show on open</Text>
                     <Text style={styles.settingsToggleHint}>
                       Display this list when the app launches on web
                     </Text>
@@ -973,9 +967,6 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
   },
   listPane: {
-    flex: 1,
-    minWidth: 320,
-    maxWidth: 520,
     backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 1,
