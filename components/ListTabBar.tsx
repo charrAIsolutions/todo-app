@@ -1,4 +1,4 @@
-import { ScrollView, Pressable, Text, StyleSheet, View } from "react-native";
+import { ScrollView, Pressable, StyleSheet, View } from "react-native";
 import { TodoList } from "@/types/todo";
 import { ListTab } from "./ListTab";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
@@ -6,9 +6,11 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 interface ListTabBarProps {
   lists: TodoList[];
   activeListId: string | null;
+  selectedListIds: string[];
   onSelectList: (listId: string) => void;
+  onToggleList: (listId: string) => void;
   onAddList: () => void;
-  onOpenSettings?: () => void;
+  onOpenSettings?: (listId: string) => void;
 }
 
 /**
@@ -18,7 +20,9 @@ interface ListTabBarProps {
 export function ListTabBar({
   lists,
   activeListId,
+  selectedListIds,
   onSelectList,
+  onToggleList,
   onAddList,
   onOpenSettings,
 }: ListTabBarProps) {
@@ -37,8 +41,19 @@ export function ListTabBar({
           <ListTab
             key={list.id}
             name={list.name}
-            isActive={list.id === activeListId}
-            onPress={() => onSelectList(list.id)}
+            isActive={
+              selectedListIds.length > 0
+                ? selectedListIds.includes(list.id)
+                : list.id === activeListId
+            }
+            onPress={() =>
+              selectedListIds.length > 0
+                ? onToggleList(list.id)
+                : onSelectList(list.id)
+            }
+            onOpenSettings={
+              onOpenSettings ? () => onOpenSettings(list.id) : undefined
+            }
           />
         ))}
 
@@ -54,18 +69,7 @@ export function ListTabBar({
         </Pressable>
       </ScrollView>
 
-      {/* Settings Button - always visible on right */}
-      {activeListId && (
-        <Pressable
-          onPress={onOpenSettings}
-          style={({ pressed }) => [
-            styles.settingsButton,
-            pressed && styles.settingsButtonPressed,
-          ]}
-        >
-          <FontAwesome name="ellipsis-h" size={18} color="#666" />
-        </Pressable>
-      )}
+      {/* Settings Button - moved into each list tab */}
     </View>
   );
 }
@@ -97,15 +101,5 @@ const styles = StyleSheet.create({
   },
   addButtonPressed: {
     opacity: 0.7,
-  },
-  settingsButton: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 4,
-  },
-  settingsButtonPressed: {
-    opacity: 0.5,
   },
 });

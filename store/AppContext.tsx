@@ -17,6 +17,7 @@ interface AppState {
   lists: TodoList[];
   tasks: Task[];
   activeListId: string | null;
+  selectedListIds: string[];
   isLoading: boolean;
   error: string | null;
 }
@@ -25,6 +26,7 @@ const initialState: AppState = {
   lists: [],
   tasks: [],
   activeListId: null,
+  selectedListIds: [],
   isLoading: true,
   error: null,
 };
@@ -41,6 +43,7 @@ type AppAction =
         lists: TodoList[];
         tasks: Task[];
         activeListId: string | null;
+        selectedListIds: string[];
       };
     }
   | { type: "SET_LOADING"; payload: boolean }
@@ -48,10 +51,15 @@ type AppAction =
 
   // List actions
   | { type: "SET_ACTIVE_LIST"; payload: string | null }
+  | { type: "SET_SELECTED_LISTS"; payload: string[] }
+  | { type: "TOGGLE_LIST_SELECTION"; payload: string }
   | { type: "ADD_LIST"; payload: ListInput }
   | {
       type: "UPDATE_LIST";
-      payload: { id: string; updates: Partial<Pick<TodoList, "name">> };
+      payload: {
+        id: string;
+        updates: Partial<Pick<TodoList, "name" | "showOnOpen">>;
+      };
     }
   | { type: "DELETE_LIST"; payload: string }
 
@@ -110,12 +118,13 @@ function appReducer(state: AppState, action: AppAction): AppState {
     // Hydration & Loading
     // -------------------------------------------------------------------------
     case "HYDRATE": {
-      const { lists, tasks, activeListId } = action.payload;
+      const { lists, tasks, activeListId, selectedListIds } = action.payload;
       return {
         ...state,
         lists,
         tasks,
         activeListId,
+        selectedListIds,
         isLoading: false,
       };
     }
@@ -130,10 +139,26 @@ function appReducer(state: AppState, action: AppAction): AppState {
     // List Actions
     // -------------------------------------------------------------------------
     case "SET_ACTIVE_LIST":
-      return { ...state, activeListId: action.payload };
+      return {
+        ...state,
+        activeListId: action.payload,
+        selectedListIds: action.payload ? [action.payload] : [],
+      };
+
+    case "SET_SELECTED_LISTS":
+      return { ...state, selectedListIds: action.payload };
+
+    case "TOGGLE_LIST_SELECTION": {
+      const listId = action.payload;
+      const isSelected = state.selectedListIds.includes(listId);
+      const selectedListIds = isSelected
+        ? state.selectedListIds.filter((id) => id !== listId)
+        : [...state.selectedListIds, listId];
+      return { ...state, selectedListIds };
+    }
 
     case "ADD_LIST": {
-      const { name, categories } = action.payload;
+      const { name, categories, showOnOpen = false } = action.payload;
       // Default categories if none provided
       const defaultCategories: CategoryInput[] = [
         { name: "Now" },
@@ -151,14 +176,20 @@ function appReducer(state: AppState, action: AppAction): AppState {
           sortOrder: index,
           color: cat.color,
         })),
+        showOnOpen,
         createdAt: nowISO(),
       };
       const newLists = [...state.lists, newList];
+      const selectedListIds =
+        state.selectedListIds.length === 0
+          ? [newList.id]
+          : state.selectedListIds;
       return {
         ...state,
         lists: newLists,
         // If this is the first list, make it active
         activeListId: state.activeListId ?? newList.id,
+        selectedListIds,
       };
     }
 
@@ -176,6 +207,15 @@ function appReducer(state: AppState, action: AppAction): AppState {
       const listId = action.payload;
       const newLists = state.lists.filter((list) => list.id !== listId);
       const newTasks = state.tasks.filter((task) => task.listId !== listId);
+      const filteredSelected = state.selectedListIds.filter(
+        (id) => id !== listId,
+      );
+      const nextSelected =
+        filteredSelected.length > 0
+          ? filteredSelected
+          : newLists[0]
+            ? [newLists[0].id]
+            : [];
       return {
         ...state,
         lists: newLists,
@@ -187,6 +227,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
               ? newLists[0].id
               : null
             : state.activeListId,
+        selectedListIds: nextSelected,
       };
     }
 

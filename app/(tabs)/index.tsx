@@ -1,15 +1,16 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   StyleSheet,
   View,
   Text,
   ScrollView,
   TextInput,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Modal,
   Pressable,
+  Switch,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAppData } from "@/hooks/useAppData";
@@ -18,6 +19,7 @@ import { AddTaskInput } from "@/components/AddTaskInput";
 import { CategorySection } from "@/components/CategorySection";
 import { DragProvider } from "@/components/drag";
 import type { DragEndEvent } from "@/types";
+import type { Task } from "@/types/todo";
 
 /**
  * Main todo list screen.
@@ -30,10 +32,13 @@ export default function TodoScreen() {
     tasks,
     activeListId,
     activeList,
+    selectedListIds,
     tasksByCategory,
     subtasksByParent,
     isLoading,
     setActiveList,
+    setSelectedLists,
+    toggleListSelection,
     addList,
     updateList,
     deleteList,
@@ -67,8 +72,10 @@ export default function TodoScreen() {
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(
     null,
   );
+  const { width: windowWidth } = useWindowDimensions();
 
   const settingsList = lists.find((l) => l.id === settingsListId);
+  const isWeb = Platform.OS === "web";
   const taskCountForSettingsList = settingsListId
     ? tasks.filter((t) => t.listId === settingsListId).length
     : 0;
@@ -105,17 +112,14 @@ export default function TodoScreen() {
     }
   };
 
-  const handleAddTask = (title: string) => {
-    if (activeListId) {
-      addTask({ title, listId: activeListId });
-    }
+  const handleAddTask = (title: string, listId: string) => {
+    addTask({ title, listId });
   };
 
-  const handleOpenSettings = () => {
-    if (!activeListId) return;
-    const list = lists.find((l) => l.id === activeListId);
+  const handleOpenSettings = (listId: string) => {
+    const list = lists.find((l) => l.id === listId);
     if (list) {
-      setSettingsListId(activeListId);
+      setSettingsListId(listId);
       setRenameValue(list.name);
       setIsRenaming(false);
       setShowDeleteConfirm(false);
@@ -291,6 +295,73 @@ export default function TodoScreen() {
     reorderCategories(settingsListId, newOrder);
   };
 
+  const listIdsToRender = isWeb
+    ? selectedListIds.length > 0
+      ? selectedListIds
+      : lists[0]
+        ? [lists[0].id]
+        : []
+    : activeListId
+      ? [activeListId]
+      : [];
+
+  useEffect(() => {
+    if (!isWeb || selectedListIds.length > 0 || lists.length === 0) return;
+    setSelectedLists([lists[0].id]);
+  }, [isWeb, lists, selectedListIds, setSelectedLists]);
+
+  const listTaskData = useMemo(() => {
+    const data = new Map<
+      string,
+      {
+        tasksByCategory: Map<string | null, Task[]>;
+        subtasksByParent: Map<string, Task[]>;
+      }
+    >();
+    const tasksByList = new Map<string, Task[]>();
+    tasks.forEach((task) => {
+      if (!tasksByList.has(task.listId)) {
+        tasksByList.set(task.listId, []);
+      }
+      tasksByList.get(task.listId)!.push(task);
+    });
+
+    tasksByList.forEach((listTasks, listId) => {
+      const tasksByCategoryMap = new Map<string | null, Task[]>();
+      const subtasksByParentMap = new Map<string, Task[]>();
+
+      listTasks.forEach((task) => {
+        if (task.parentTaskId === null) {
+          const key = task.categoryId;
+          if (!tasksByCategoryMap.has(key)) {
+            tasksByCategoryMap.set(key, []);
+          }
+          tasksByCategoryMap.get(key)!.push(task);
+        } else {
+          const parentId = task.parentTaskId;
+          if (!subtasksByParentMap.has(parentId)) {
+            subtasksByParentMap.set(parentId, []);
+          }
+          subtasksByParentMap.get(parentId)!.push(task);
+        }
+      });
+
+      tasksByCategoryMap.forEach((categoryTasks) => {
+        categoryTasks.sort((a, b) => a.sortOrder - b.sortOrder);
+      });
+      subtasksByParentMap.forEach((subtasks) => {
+        subtasks.sort((a, b) => a.sortOrder - b.sortOrder);
+      });
+
+      data.set(listId, {
+        tasksByCategory: tasksByCategoryMap,
+        subtasksByParent: subtasksByParentMap,
+      });
+    });
+
+    return data;
+  }, [tasks]);
+
   if (isLoading) {
     return (
       <View style={styles.centered}>
@@ -308,6 +379,80 @@ export default function TodoScreen() {
   const hasAnyTasks = tasksByCategory.size > 0;
   const uncategorizedTasks = tasksByCategory.get(null) ?? [];
 
+  const renderListPane = (listId: string) => {
+    const list = lists.find((item) => item.id === listId);
+    if (!list) return null;
+    const listCategories = [...list.categories].sort(
+      (a, b) => a.sortOrder - b.sortOrder,
+    );
+    const divisor = Math.min(4, Math.max(1, listIdsToRender.length));
+    const contentPadding = 32;
+    const columnGap = 16;
+    const availableWidth =
+      windowWidth - contentPadding - columnGap * Math.max(0, divisor - 1);
+    const paneWidth = Math.max(availableWidth / divisor, 360);
+    const listData = listTaskData.get(listId);
+    const listTasksByCategory = listData?.tasksByCategory ?? new Map();
+    const listSubtasksByParent = listData?.subtasksByParent ?? new Map();
+    const listHasTasks = listTasksByCategory.size > 0;
+    const listUncategorizedTasks = listTasksByCategory.get(null) ?? [];
+
+    return (
+      <View key={listId} style={[styles.listPane, { width: paneWidth }]}>
+        <Text style={styles.listTitle}>{list.name}</Text>
+        <DragProvider onDragEnd={handleDragEnd}>
+          <ScrollView
+            style={styles.taskList}
+            contentContainerStyle={styles.taskListContent}
+          >
+            {/* Render each category section (even when empty for drag-drop targets) */}
+            {listCategories.map((category) => {
+              const categoryTasks =
+                listTasksByCategory.get(category.id) ?? [];
+              return (
+                <CategorySection
+                  key={category.id}
+                  category={category}
+                  listId={listId}
+                  tasks={categoryTasks}
+                  subtasksByParent={listSubtasksByParent}
+                  onToggleTask={toggleTask}
+                  onPressTask={handlePressTask}
+                  dragEnabled
+                />
+              );
+            })}
+
+            {/* Uncategorized section at bottom */}
+            {listUncategorizedTasks.length > 0 && (
+              <CategorySection
+                category={null}
+                listId={listId}
+                tasks={listUncategorizedTasks}
+                subtasksByParent={listSubtasksByParent}
+                onToggleTask={toggleTask}
+                onPressTask={handlePressTask}
+                dragEnabled
+              />
+            )}
+
+            {/* Empty state only when no categories and no tasks */}
+            {listCategories.length === 0 && !listHasTasks && (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No tasks yet</Text>
+                <Text style={styles.emptyStateHint}>
+                  Add your first task below
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        </DragProvider>
+
+        <AddTaskInput onAddTask={(title) => handleAddTask(title, listId)} />
+      </View>
+    );
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -317,7 +462,9 @@ export default function TodoScreen() {
       <ListTabBar
         lists={lists}
         activeListId={activeListId}
+        selectedListIds={isWeb ? listIdsToRender : []}
         onSelectList={setActiveList}
+        onToggleList={toggleListSelection}
         onAddList={handleAddList}
         onOpenSettings={handleOpenSettings}
       />
@@ -340,54 +487,15 @@ export default function TodoScreen() {
         </View>
       )}
 
-      {/* Task List with Drag-and-Drop */}
-      <DragProvider onDragEnd={handleDragEnd}>
+      {isWeb ? (
         <ScrollView
-          style={styles.taskList}
-          contentContainerStyle={styles.taskListContent}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.splitViewContent}
+          style={styles.splitView}
         >
-          {activeList ? (
-            <>
-              {/* Render each category section (even when empty for drag-drop targets) */}
-              {categories.map((category) => {
-                const categoryTasks = tasksByCategory.get(category.id) ?? [];
-                return (
-                  <CategorySection
-                    key={category.id}
-                    category={category}
-                    listId={activeListId!}
-                    tasks={categoryTasks}
-                    subtasksByParent={subtasksByParent}
-                    onToggleTask={toggleTask}
-                    onPressTask={handlePressTask}
-                    dragEnabled
-                  />
-                );
-              })}
-
-              {/* Uncategorized section at bottom */}
-              {uncategorizedTasks.length > 0 && (
-                <CategorySection
-                  category={null}
-                  listId={activeListId!}
-                  tasks={uncategorizedTasks}
-                  subtasksByParent={subtasksByParent}
-                  onToggleTask={toggleTask}
-                  onPressTask={handlePressTask}
-                  dragEnabled
-                />
-              )}
-
-              {/* Empty state only when no categories and no tasks */}
-              {categories.length === 0 && !hasAnyTasks && (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateText}>No tasks yet</Text>
-                  <Text style={styles.emptyStateHint}>
-                    Add your first task below
-                  </Text>
-                </View>
-              )}
-            </>
+          {listIdsToRender.length > 0 ? (
+            listIdsToRender.map((listId) => renderListPane(listId))
           ) : (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>No list selected</Text>
@@ -397,10 +505,75 @@ export default function TodoScreen() {
             </View>
           )}
         </ScrollView>
-      </DragProvider>
+      ) : (
+        <>
+          {/* Task List with Drag-and-Drop */}
+          <DragProvider onDragEnd={handleDragEnd}>
+            <ScrollView
+              style={styles.taskList}
+              contentContainerStyle={styles.taskListContent}
+            >
+              {activeList ? (
+                <>
+                  {/* Render each category section (even when empty for drag-drop targets) */}
+                  {categories.map((category) => {
+                    const categoryTasks = tasksByCategory.get(category.id) ?? [];
+                    return (
+                      <CategorySection
+                        key={category.id}
+                        category={category}
+                        listId={activeListId!}
+                        tasks={categoryTasks}
+                        subtasksByParent={subtasksByParent}
+                        onToggleTask={toggleTask}
+                        onPressTask={handlePressTask}
+                        dragEnabled
+                      />
+                    );
+                  })}
 
-      {/* Add Task Input */}
-      {activeListId && <AddTaskInput onAddTask={handleAddTask} />}
+                  {/* Uncategorized section at bottom */}
+                  {uncategorizedTasks.length > 0 && (
+                    <CategorySection
+                      category={null}
+                      listId={activeListId!}
+                      tasks={uncategorizedTasks}
+                      subtasksByParent={subtasksByParent}
+                      onToggleTask={toggleTask}
+                      onPressTask={handlePressTask}
+                      dragEnabled
+                    />
+                  )}
+
+                  {/* Empty state only when no categories and no tasks */}
+                  {categories.length === 0 && !hasAnyTasks && (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyStateText}>No tasks yet</Text>
+                      <Text style={styles.emptyStateHint}>
+                        Add your first task below
+                      </Text>
+                    </View>
+                  )}
+                </>
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateText}>No list selected</Text>
+                  <Text style={styles.emptyStateHint}>
+                    Create a list using the + button above
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </DragProvider>
+
+          {/* Add Task Input */}
+          {activeListId && (
+            <AddTaskInput
+              onAddTask={(title) => handleAddTask(title, activeListId)}
+            />
+          )}
+        </>
+      )}
 
       {/* List Settings Modal */}
       <Modal
@@ -453,6 +626,24 @@ export default function TodoScreen() {
                     <Text style={styles.settingsOptionText}>Rename List</Text>
                   </Pressable>
                 )}
+
+                <View style={styles.settingsToggleRow}>
+                  <View>
+                    <Text style={styles.settingsToggleTitle}>
+                      Show on open
+                    </Text>
+                    <Text style={styles.settingsToggleHint}>
+                      Display this list when the app launches on web
+                    </Text>
+                  </View>
+                  <Switch
+                    value={settingsList?.showOnOpen ?? false}
+                    onValueChange={(value) => {
+                      if (!settingsListId) return;
+                      updateList(settingsListId, { showOnOpen: value });
+                    }}
+                  />
+                </View>
 
                 {/* Categories Section */}
                 <View style={styles.categoriesSection}>
@@ -773,6 +964,32 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingTop: 0,
   },
+  splitView: {
+    flex: 1,
+  },
+  splitViewContent: {
+    padding: 16,
+    gap: 16,
+    alignItems: "stretch",
+  },
+  listPane: {
+    flex: 1,
+    minWidth: 320,
+    maxWidth: 520,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+    overflow: "hidden",
+  },
+  listTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#333",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
   emptyState: {
     flex: 1,
     alignItems: "center",
@@ -833,6 +1050,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     color: "#333",
+  },
+  settingsToggleRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 8,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+  },
+  settingsToggleTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
+  },
+  settingsToggleHint: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 4,
   },
   deleteOption: {
     backgroundColor: "#fff0f0",
