@@ -11,7 +11,6 @@ import {
   Pressable,
   Switch,
   useWindowDimensions,
-  type LayoutChangeEvent,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAppData } from "@/hooks/useAppData";
@@ -74,7 +73,6 @@ export default function TodoScreen() {
     null,
   );
   const { width: windowWidth } = useWindowDimensions();
-  const [splitViewWidth, setSplitViewWidth] = useState<number | null>(null);
 
   const settingsList = lists.find((l) => l.id === settingsListId);
   const isWeb = Platform.OS === "web";
@@ -387,8 +385,11 @@ export default function TodoScreen() {
     const listCategories = [...list.categories].sort(
       (a, b) => a.sortOrder - b.sortOrder,
     );
-    const availableWidth = splitViewWidth ?? windowWidth;
     const divisor = Math.min(4, Math.max(1, listIdsToRender.length));
+    const contentPadding = 32;
+    const columnGap = 16;
+    const availableWidth =
+      windowWidth - contentPadding - columnGap * Math.max(0, divisor - 1);
     const paneWidth = Math.max(availableWidth / divisor, 360);
     const listData = listTaskData.get(listId);
     const listTasksByCategory = listData?.tasksByCategory ?? new Map();
@@ -492,9 +493,6 @@ export default function TodoScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.splitViewContent}
           style={styles.splitView}
-          onLayout={(event: LayoutChangeEvent) => {
-            setSplitViewWidth(event.nativeEvent.layout.width);
-          }}
         >
           {listIdsToRender.length > 0 ? (
             listIdsToRender.map((listId) => renderListPane(listId))
