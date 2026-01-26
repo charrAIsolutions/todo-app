@@ -308,14 +308,6 @@ export default function TodoScreen() {
     setSelectedLists([lists[0].id]);
   }, [isWeb, lists, selectedListIds, setSelectedLists]);
 
-  if (isLoading) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
-  }
-
   const listTaskData = useMemo(() => {
     const data = new Map<
       string,
@@ -333,8 +325,8 @@ export default function TodoScreen() {
     });
 
     tasksByList.forEach((listTasks, listId) => {
-      const tasksByCategoryMap = new Map<string | null, typeof tasks>();
-      const subtasksByParentMap = new Map<string, typeof tasks>();
+      const tasksByCategoryMap = new Map<string | null, Task[]>();
+      const subtasksByParentMap = new Map<string, Task[]>();
 
       listTasks.forEach((task) => {
         if (task.parentTaskId === null) {
@@ -367,6 +359,14 @@ export default function TodoScreen() {
 
     return data;
   }, [tasks]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
 
   // Get categories for active list, sorted by sortOrder
   const categories = activeList?.categories
