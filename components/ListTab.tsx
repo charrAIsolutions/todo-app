@@ -1,5 +1,6 @@
 import { Pressable, Text, StyleSheet, Platform, View } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { useState } from "react";
 
 interface ListTabProps {
   name: string;
@@ -20,51 +21,51 @@ export function ListTab({
   onPress,
   onOpenSettings,
 }: ListTabProps) {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <Pressable
       onPress={onPress}
+      onHoverIn={() => setIsHovered(true)}
+      onHoverOut={() => setIsHovered(false)}
       style={({ pressed }) => [
         styles.tab,
         isActive && styles.tabActive,
         pressed && styles.tabPressed,
       ]}
     >
-      {({ hovered }) => {
-        const showSettings = Platform.OS !== "web" || hovered;
-        return (
-          <View style={styles.tabContent}>
-            <Text
-              style={[
-                styles.tabText,
-                isActive && styles.tabTextActive,
-                isWeb && styles.noSelect,
-              ]}
-            >
-              {name}
-            </Text>
-            {onOpenSettings && (
-              <Pressable
-                onPress={(event) => {
-                  event.stopPropagation();
-                  onOpenSettings();
-                }}
-                style={[
-                  styles.settingsButton,
-                  showSettings
-                    ? styles.settingsButtonVisible
-                    : styles.settingsButtonHidden,
-                ]}
-              >
-                <FontAwesome
-                  name="ellipsis-h"
-                  size={14}
-                  color={isActive ? "#fff" : "#666"}
-                />
-              </Pressable>
-            )}
-          </View>
-        );
-      }}
+      <View style={styles.tabContent}>
+        <Text
+          style={[
+            styles.tabText,
+            isActive && styles.tabTextActive,
+            isWeb && styles.noSelect,
+          ]}
+        >
+          {name}
+        </Text>
+        {onOpenSettings && (
+          <Pressable
+            onHoverIn={() => setIsHovered(true)}
+            onPress={(event) => {
+              event.stopPropagation();
+              onOpenSettings();
+            }}
+            style={[
+              styles.settingsButton,
+              Platform.OS !== "web" || isHovered
+                ? styles.settingsButtonVisible
+                : styles.settingsButtonHidden,
+            ]}
+          >
+            <FontAwesome
+              name="ellipsis-v"
+              size={14}
+              color={isActive ? "#fff" : "#666"}
+            />
+          </Pressable>
+        )}
+      </View>
     </Pressable>
   );
 }

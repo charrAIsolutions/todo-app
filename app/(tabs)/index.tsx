@@ -10,6 +10,7 @@ import {
   Modal,
   Pressable,
   Switch,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAppData } from "@/hooks/useAppData";
@@ -71,6 +72,7 @@ export default function TodoScreen() {
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(
     null,
   );
+  const { width: windowWidth } = useWindowDimensions();
 
   const settingsList = lists.find((l) => l.id === settingsListId);
   const isWeb = Platform.OS === "web";
@@ -383,6 +385,7 @@ export default function TodoScreen() {
     const listCategories = [...list.categories].sort(
       (a, b) => a.sortOrder - b.sortOrder,
     );
+    const paneWidth = Math.max(windowWidth / 3, 360);
     const listData = listTaskData.get(listId);
     const listTasksByCategory = listData?.tasksByCategory ?? new Map();
     const listSubtasksByParent = listData?.subtasksByParent ?? new Map();
@@ -390,7 +393,7 @@ export default function TodoScreen() {
     const listUncategorizedTasks = listTasksByCategory.get(null) ?? [];
 
     return (
-      <View key={listId} style={styles.listPane}>
+      <View key={listId} style={[styles.listPane, { width: paneWidth }]}>
         <Text style={styles.listTitle}>{list.name}</Text>
         <DragProvider onDragEnd={handleDragEnd}>
           <ScrollView
