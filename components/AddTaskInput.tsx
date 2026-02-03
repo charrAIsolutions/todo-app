@@ -29,7 +29,7 @@ export function AddTaskInput({
     if (trimmed) {
       onAddTask(trimmed);
       setTitle("");
-      Keyboard.dismiss();
+      Keyboard.dismiss?.();
     }
   };
 

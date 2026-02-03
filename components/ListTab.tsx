@@ -28,6 +28,7 @@ export function ListTab({
       onPress={onPress}
       onHoverIn={() => setIsHovered(true)}
       onHoverOut={() => setIsHovered(false)}
+      testID={isActive ? "list-tab-active" : "list-tab"}
       style={({ pressed }) => [
         styles.tab,
         isActive && styles.tabActive,
@@ -48,7 +49,7 @@ export function ListTab({
           <Pressable
             onHoverIn={() => setIsHovered(true)}
             onPress={(event) => {
-              event.stopPropagation();
+              event?.stopPropagation?.();
               onOpenSettings();
             }}
             style={[
