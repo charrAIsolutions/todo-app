@@ -102,27 +102,19 @@ User Action -> useAppData dispatch -> AppContext reducer -> AsyncStorage
 
 ## Recommended Next Steps
 
-### Priority 1: Merge Current Work
-```bash
-# Current branch has Phase 7 fixes
-git checkout main
-git merge docs/update-from-codex
-git push
-```
-
-### Priority 2: Polish (Phase 8)
+### Priority 1: Polish (Phase 8)
 - Improve empty state messaging
 - Add loading skeletons
 - Smooth animations for list transitions
 - Keyboard shortcuts for web
 
-### Priority 3: iOS Deployment (Phase 9)
+### Priority 2: iOS Deployment (Phase 9)
 - Set up EAS Build
 - Create app icons and splash screens
 - Configure app.json for App Store
 - TestFlight beta testing
 
-### Priority 4: Cloud Sync (Phase 10 - Optional)
+### Priority 3: Cloud Sync (Phase 10 - Optional)
 - Add authentication (likely Supabase or Firebase)
 - Sync data across devices
 - Conflict resolution strategy

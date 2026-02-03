@@ -7,6 +7,7 @@ import {
   ScrollView,
   Pressable,
   Platform,
+  Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { useAppData } from "@/hooks/useAppData";
@@ -162,8 +163,6 @@ export default function TaskDetailScreen() {
         router.back();
       }
     } else {
-      // Use Alert on native platforms
-      const { Alert } = require("react-native");
       Alert.alert(
         "Delete Task",
         "Are you sure you want to delete this task and all its subtasks?",
@@ -179,6 +178,23 @@ export default function TaskDetailScreen() {
           },
         ],
       );
+    }
+  };
+
+  const handleDeleteSubtask = (subtaskId: string, subtaskTitle: string) => {
+    if (Platform.OS === "web") {
+      if (window.confirm(`Delete subtask "${subtaskTitle}"?`)) {
+        deleteTask(subtaskId);
+      }
+    } else {
+      Alert.alert("Delete Subtask", `Delete "${subtaskTitle}"?`, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteTask(subtaskId),
+        },
+      ]);
     }
   };
 
@@ -223,7 +239,12 @@ export default function TaskDetailScreen() {
           title: "Task Details",
           presentation: "modal",
           headerRight: () => (
-            <Pressable onPress={handleDeleteTask} style={styles.deleteButton}>
+            <Pressable
+              onPress={handleDeleteTask}
+              style={styles.deleteButton}
+              accessibilityLabel="Delete task"
+              accessibilityRole="button"
+            >
               <FontAwesome name="trash" size={20} color="#FF3B30" />
             </Pressable>
           ),
@@ -312,6 +333,9 @@ export default function TaskDetailScreen() {
                   ]}
                   onPress={handleMoveUp}
                   disabled={!canMoveUp}
+                  accessibilityLabel="Move task up"
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !canMoveUp }}
                 >
                   <FontAwesome
                     name="chevron-up"
@@ -326,6 +350,9 @@ export default function TaskDetailScreen() {
                   ]}
                   onPress={handleMoveDown}
                   disabled={!canMoveDown}
+                  accessibilityLabel="Move task down"
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !canMoveDown }}
                 >
                   <FontAwesome
                     name="chevron-down"
@@ -438,7 +465,9 @@ export default function TaskDetailScreen() {
               </Text>
               <Pressable
                 style={styles.subtaskDelete}
-                onPress={() => deleteTask(subtask.id)}
+                onPress={() => handleDeleteSubtask(subtask.id, subtask.title)}
+                accessibilityLabel={`Delete subtask ${subtask.title}`}
+                accessibilityRole="button"
               >
                 <FontAwesome name="times" size={16} color="#999" />
               </Pressable>
@@ -462,6 +491,9 @@ export default function TaskDetailScreen() {
               ]}
               onPress={handleAddSubtask}
               disabled={!newSubtaskTitle.trim()}
+              accessibilityLabel="Add subtask"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !newSubtaskTitle.trim() }}
             >
               <FontAwesome
                 name="plus"
