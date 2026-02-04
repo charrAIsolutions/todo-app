@@ -1,5 +1,10 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { View, StyleSheet, LayoutChangeEvent } from "react-native";
+import Animated, {
+  FadeInDown,
+  FadeOutUp,
+  LinearTransition,
+} from "react-native-reanimated";
 import { Category, Task } from "@/types/todo";
 import { CategoryHeader, UncategorizedHeader } from "./CategoryHeader";
 import { TaskItem } from "./TaskItem";
@@ -15,8 +20,15 @@ interface CategorySectionProps {
   dragEnabled?: boolean;
 }
 
+// Shared entry animation config
+const entryAnimation = FadeInDown.springify().damping(15);
+const exitAnimation = FadeOutUp.duration(200);
+
 /**
  * Inner component that uses drag context (only rendered when dragEnabled)
+ * Note: LinearTransition is NOT used here to avoid conflicts with drag-drop
+ * position measurements. The drag system uses measureInWindow which can
+ * return stale positions if a layout animation is in progress.
  */
 function DraggableCategorySection({
   category,
@@ -31,6 +43,12 @@ function DraggableCategorySection({
   const categoryId = category?.id ?? null;
 
   const containerRef = useRef<View>(null);
+
+  // Track if initial render is complete to skip entry animations on mount
+  const hasRendered = useRef(false);
+  useEffect(() => {
+    hasRendered.current = true;
+  }, []);
 
   const handleLayout = useCallback(
     (event: LayoutChangeEvent) => {
@@ -61,7 +79,11 @@ function DraggableCategorySection({
               activeDropZone?.type !== "nest";
 
             return (
-              <View key={task.id}>
+              <Animated.View
+                key={task.id}
+                entering={hasRendered.current ? entryAnimation : undefined}
+                exiting={exitAnimation}
+              >
                 {/* Drop indicator before task */}
                 <InlineDropIndicator
                   active={showDropBefore}
@@ -80,17 +102,22 @@ function DraggableCategorySection({
 
                 {/* Subtasks */}
                 {subtasks.map((subtask, subtaskIndex) => (
-                  <DraggableTask
+                  <Animated.View
                     key={subtask.id}
-                    task={subtask}
-                    index={subtaskIndex}
-                    isSubtask={true}
-                    indentLevel={2}
-                    onToggle={() => onToggleTask(subtask.id)}
-                    onPress={() => onPressTask?.(subtask.id)}
-                  />
+                    entering={hasRendered.current ? entryAnimation : undefined}
+                    exiting={exitAnimation}
+                  >
+                    <DraggableTask
+                      task={subtask}
+                      index={subtaskIndex}
+                      isSubtask={true}
+                      indentLevel={2}
+                      onToggle={() => onToggleTask(subtask.id)}
+                      onPress={() => onPressTask?.(subtask.id)}
+                    />
+                  </Animated.View>
                 ))}
-              </View>
+              </Animated.View>
             );
           })}
 
@@ -113,6 +140,8 @@ function DraggableCategorySection({
 
 /**
  * Static category section (no drag support)
+ * Uses LinearTransition for smooth reordering since there's no drag system
+ * measuring positions here.
  */
 function StaticCategorySection({
   category,
@@ -122,6 +151,12 @@ function StaticCategorySection({
   onToggleTask,
   onPressTask,
 }: Omit<CategorySectionProps, "dragEnabled">) {
+  // Track if initial render is complete to skip entry animations on mount
+  const hasRendered = useRef(false);
+  useEffect(() => {
+    hasRendered.current = true;
+  }, []);
+
   return (
     <View style={styles.container}>
       {/* Category Header */}
@@ -138,7 +173,12 @@ function StaticCategorySection({
             const subtasks = subtasksByParent.get(task.id) ?? [];
 
             return (
-              <View key={task.id}>
+              <Animated.View
+                key={task.id}
+                entering={hasRendered.current ? entryAnimation : undefined}
+                exiting={exitAnimation}
+                layout={LinearTransition.springify()}
+              >
                 <TaskItem
                   task={task}
                   onToggle={() => onToggleTask(task.id)}
@@ -147,17 +187,23 @@ function StaticCategorySection({
                 />
 
                 {subtasks.map((subtask) => (
-                  <TaskItem
+                  <Animated.View
                     key={subtask.id}
-                    task={subtask}
-                    onToggle={() => onToggleTask(subtask.id)}
-                    onPress={
-                      onPressTask ? () => onPressTask(subtask.id) : undefined
-                    }
-                    indentLevel={2}
-                  />
+                    entering={hasRendered.current ? entryAnimation : undefined}
+                    exiting={exitAnimation}
+                    layout={LinearTransition.springify()}
+                  >
+                    <TaskItem
+                      task={subtask}
+                      onToggle={() => onToggleTask(subtask.id)}
+                      onPress={
+                        onPressTask ? () => onPressTask(subtask.id) : undefined
+                      }
+                      indentLevel={2}
+                    />
+                  </Animated.View>
                 ))}
-              </View>
+              </Animated.View>
             );
           })}
         </View>
@@ -173,6 +219,8 @@ function StaticCategorySection({
  * Renders category header (or uncategorized header) followed by indented tasks.
  * Also renders subtasks under each parent task.
  * When dragEnabled, uses DraggableTask with drop indicators.
+ * Features entry/exit animations for smooth list updates (only for items
+ * added/removed after initial render - not on mount or list switch).
  */
 export function CategorySection({
   category,
