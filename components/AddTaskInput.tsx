@@ -1,28 +1,32 @@
 import { useState } from "react";
-import {
-  View,
-  TextInput,
-  Pressable,
-  Text,
-  StyleSheet,
-  Keyboard,
-} from "react-native";
+import { View, TextInput, StyleSheet, Keyboard, Pressable } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { SPRING } from "@/lib/animations";
 
 interface AddTaskInputProps {
   onAddTask: (title: string) => void;
   placeholder?: string;
 }
 
+// Create animated pressable component
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 /**
  * Input field for adding new tasks.
  * Shows at the bottom of the task list with a text input and add button.
+ * Features animated button press feedback.
  */
 export function AddTaskInput({
   onAddTask,
   placeholder = "Add a task...",
 }: AddTaskInputProps) {
   const [title, setTitle] = useState("");
+  const buttonScale = useSharedValue(1);
 
   const handleSubmit = () => {
     const trimmed = title.trim();
@@ -32,6 +36,18 @@ export function AddTaskInput({
       Keyboard.dismiss?.();
     }
   };
+
+  const handlePressIn = () => {
+    buttonScale.value = withSpring(0.95, SPRING.snappy);
+  };
+
+  const handlePressOut = () => {
+    buttonScale.value = withSpring(1, SPRING.snappy);
+  };
+
+  const animatedButtonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buttonScale.value }],
+  }));
 
   return (
     <View style={styles.container}>
@@ -44,13 +60,15 @@ export function AddTaskInput({
         onSubmitEditing={handleSubmit}
         returnKeyType="done"
       />
-      <Pressable
+      <AnimatedPressable
         onPress={handleSubmit}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
         disabled={!title.trim()}
-        style={({ pressed }) => [
+        style={[
           styles.addButton,
           !title.trim() && styles.addButtonDisabled,
-          pressed && styles.addButtonPressed,
+          animatedButtonStyle,
         ]}
       >
         <FontAwesome
@@ -58,7 +76,7 @@ export function AddTaskInput({
           size={18}
           color={title.trim() ? "#fff" : "#ccc"}
         />
-      </Pressable>
+      </AnimatedPressable>
     </View>
   );
 }
@@ -92,8 +110,5 @@ const styles = StyleSheet.create({
   },
   addButtonDisabled: {
     backgroundColor: "#e0e0e0",
-  },
-  addButtonPressed: {
-    opacity: 0.8,
   },
 });

@@ -65,7 +65,11 @@ function RootLayoutNav() {
             <Stack.Screen name="modal" options={{ presentation: "modal" }} />
             <Stack.Screen
               name="task/[id]"
-              options={{ presentation: "modal", title: "Task Details" }}
+              options={{
+                presentation: "modal",
+                title: "Task Details",
+                animation: "slide_from_bottom",
+              }}
             />
           </Stack>
         </ThemeProvider>
