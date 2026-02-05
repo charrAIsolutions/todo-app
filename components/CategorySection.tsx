@@ -1,5 +1,5 @@
 import { useCallback, useRef, useEffect } from "react";
-import { View, StyleSheet, LayoutChangeEvent } from "react-native";
+import { View, LayoutChangeEvent } from "react-native";
 import Animated, {
   FadeInDown,
   FadeOutUp,
@@ -60,7 +60,7 @@ function DraggableCategorySection({
   );
 
   return (
-    <View ref={containerRef} style={styles.container} onLayout={handleLayout}>
+    <View ref={containerRef} className="mb-2" onLayout={handleLayout}>
       {/* Category Header */}
       {category ? (
         <CategoryHeader category={category} taskCount={tasks.length} />
@@ -70,7 +70,7 @@ function DraggableCategorySection({
 
       {/* Tasks */}
       {tasks.length > 0 ? (
-        <View style={styles.taskList}>
+        <View>
           {tasks.map((task, index) => {
             const subtasks = subtasksByParent.get(task.id) ?? [];
             const showDropBefore =
@@ -132,7 +132,7 @@ function DraggableCategorySection({
           />
         </View>
       ) : (
-        <View style={styles.emptyCategory} />
+        <View className="h-8 ml-4 border border-dashed border-border rounded-lg bg-surface" />
       )}
     </View>
   );
@@ -158,7 +158,7 @@ function StaticCategorySection({
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View className="mb-2">
       {/* Category Header */}
       {category ? (
         <CategoryHeader category={category} taskCount={tasks.length} />
@@ -168,7 +168,7 @@ function StaticCategorySection({
 
       {/* Tasks */}
       {tasks.length > 0 ? (
-        <View style={styles.taskList}>
+        <View>
           {tasks.map((task) => {
             const subtasks = subtasksByParent.get(task.id) ?? [];
 
@@ -208,7 +208,7 @@ function StaticCategorySection({
           })}
         </View>
       ) : (
-        <View style={styles.emptyCategory} />
+        <View className="h-8 ml-4 border border-dashed border-border rounded-lg bg-surface" />
       )}
     </View>
   );
@@ -261,21 +261,3 @@ export function CategorySection({
     />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 8,
-  },
-  taskList: {
-    // Tasks are indented via TaskItem's indentLevel prop
-  },
-  emptyCategory: {
-    height: 32,
-    marginLeft: 16,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    borderStyle: "dashed",
-    borderRadius: 8,
-    backgroundColor: "#fafafa",
-  },
-});

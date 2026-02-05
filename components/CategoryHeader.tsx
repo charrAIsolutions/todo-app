@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text } from "react-native";
 import { Category } from "@/types/todo";
 
 interface CategoryHeaderProps {
@@ -13,13 +13,17 @@ interface CategoryHeaderProps {
 export function CategoryHeader({ category, taskCount }: CategoryHeaderProps) {
   return (
     <View
-      style={[
-        styles.container,
-        category.color && { backgroundColor: category.color },
-      ]}
+      className="flex-row items-center justify-between py-2.5 px-3 bg-surface-secondary rounded-md mt-4 mb-1"
+      style={category.color ? { backgroundColor: category.color } : undefined}
     >
-      <Text style={styles.name}>{category.name}</Text>
-      {taskCount !== undefined && <Text style={styles.count}>{taskCount}</Text>}
+      <Text className="text-[15px] font-bold text-text uppercase tracking-wide">
+        {category.name}
+      </Text>
+      {taskCount !== undefined && (
+        <Text className="text-[13px] font-semibold text-text-secondary bg-border px-2 py-0.5 rounded-full overflow-hidden">
+          {taskCount}
+        </Text>
+      )}
     </View>
   );
 }
@@ -29,58 +33,15 @@ export function CategoryHeader({ category, taskCount }: CategoryHeaderProps) {
  */
 export function UncategorizedHeader({ taskCount }: { taskCount?: number }) {
   return (
-    <View style={[styles.container, styles.uncategorized]}>
-      <Text style={[styles.name, styles.uncategorizedName]}>Uncategorized</Text>
+    <View className="flex-row items-center justify-between py-2.5 px-3 bg-surface rounded-md mt-4 mb-1 border border-dashed border-border">
+      <Text className="text-[15px] font-semibold text-text-muted uppercase tracking-wide">
+        Uncategorized
+      </Text>
       {taskCount !== undefined && (
-        <Text style={[styles.count, styles.uncategorizedCount]}>
+        <Text className="text-[13px] font-semibold text-text-muted bg-surface-secondary px-2 py-0.5 rounded-full overflow-hidden">
           {taskCount}
         </Text>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 6,
-    marginTop: 16,
-    marginBottom: 4,
-  },
-  name: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#333",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  count: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#666",
-    backgroundColor: "#e0e0e0",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    overflow: "hidden",
-  },
-  uncategorized: {
-    backgroundColor: "#fafafa",
-    borderWidth: 1,
-    borderColor: "#e8e8e8",
-    borderStyle: "dashed",
-  },
-  uncategorizedName: {
-    color: "#888",
-    fontWeight: "600",
-  },
-  uncategorizedCount: {
-    backgroundColor: "#f0f0f0",
-    color: "#888",
-  },
-});

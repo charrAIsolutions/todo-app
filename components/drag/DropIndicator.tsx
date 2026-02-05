@@ -6,6 +6,8 @@ import Animated, {
 } from "react-native-reanimated";
 
 import type { DropZoneType } from "@/types";
+import { useTheme } from "@/hooks/useTheme";
+import { getColors } from "@/lib/colors";
 
 interface DropIndicatorProps {
   visible: boolean;
@@ -19,6 +21,9 @@ interface DropIndicatorProps {
  * - Left-aligned for unnest
  */
 export function DropIndicator({ visible, type }: DropIndicatorProps) {
+  const { effectiveScheme } = useTheme();
+  const colors = getColors(effectiveScheme);
+
   const animatedStyle = useAnimatedStyle(() => {
     return {
       opacity: withSpring(visible ? 1 : 0, { damping: 20 }),
@@ -30,23 +35,41 @@ export function DropIndicator({ visible, type }: DropIndicatorProps) {
     };
   }, [visible]);
 
-  // Different styles based on drop type
-  const getIndicatorStyle = () => {
+  // Get color based on drop type using semantic colors
+  const getIndicatorColor = () => {
     switch (type) {
       case "nest":
-        return styles.nestIndicator;
+        return colors.success;
       case "unnest":
-        return styles.unnestIndicator;
+        return colors.danger;
       case "move-category":
-        return styles.moveIndicator;
+        return colors.warning;
       default:
-        return styles.reorderIndicator;
+        return colors.primary;
+    }
+  };
+
+  // Get margins based on drop type
+  const getIndicatorMargins = () => {
+    switch (type) {
+      case "nest":
+        return { marginLeft: 44, marginRight: 8 };
+      case "unnest":
+        return { marginRight: 44, marginLeft: 8 };
+      default:
+        return { marginHorizontal: 8 };
     }
   };
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
-      <View style={[styles.line, getIndicatorStyle()]} />
+      <View
+        style={[
+          styles.line,
+          { backgroundColor: getIndicatorColor() },
+          getIndicatorMargins(),
+        ]}
+      />
     </Animated.View>
   );
 }
@@ -61,6 +84,9 @@ export function InlineDropIndicator({
   active: boolean;
   type: DropZoneType;
 }) {
+  const { effectiveScheme } = useTheme();
+  const colors = getColors(effectiveScheme);
+
   const animatedStyle = useAnimatedStyle(() => {
     return {
       height: withSpring(active ? 4 : 0, { damping: 15 }),
@@ -71,11 +97,11 @@ export function InlineDropIndicator({
   const getBackgroundColor = () => {
     switch (type) {
       case "nest":
-        return "#34C759"; // Green for nesting
+        return colors.success;
       case "move-category":
-        return "#FF9500"; // Orange for category change
+        return colors.warning;
       default:
-        return "#007AFF"; // Blue for reorder
+        return colors.primary;
     }
   };
 
@@ -102,24 +128,6 @@ const styles = StyleSheet.create({
   line: {
     height: 3,
     borderRadius: 2,
-  },
-  reorderIndicator: {
-    backgroundColor: "#007AFF",
-    marginHorizontal: 8,
-  },
-  moveIndicator: {
-    backgroundColor: "#FF9500",
-    marginHorizontal: 8,
-  },
-  nestIndicator: {
-    backgroundColor: "#34C759",
-    marginLeft: 44, // Indented to show nesting intent
-    marginRight: 8,
-  },
-  unnestIndicator: {
-    backgroundColor: "#FF3B30",
-    marginRight: 44, // Shorter to show unnesting
-    marginLeft: 8,
   },
   inlineContainer: {
     marginHorizontal: 8,

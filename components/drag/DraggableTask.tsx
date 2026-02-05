@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from "react";
-import { View, StyleSheet, LayoutChangeEvent, Platform } from "react-native";
+import { View, LayoutChangeEvent, Platform } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
@@ -134,6 +134,7 @@ export function DraggableTask({
 
   // Animated styles for the dragged item
   // isDragged is task-specific (checks dragState.draggedTask?.id === task.id)
+  // Keep using StyleSheet for animated styles (Reanimated requirement)
   const animatedStyle = useAnimatedStyle(() => {
     if (!isDragged) {
       return {
@@ -167,7 +168,7 @@ export function DraggableTask({
   return (
     <View ref={viewRef} onLayout={handleLayout}>
       <GestureDetector gesture={gesture}>
-        <Animated.View style={[styles.wrapper, animatedStyle]}>
+        <Animated.View className="bg-surface" style={animatedStyle}>
           <Animated.View style={placeholderStyle}>
             <TaskItem
               task={task}
@@ -185,9 +186,3 @@ export function DraggableTask({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrapper: {
-    backgroundColor: "#fff",
-  },
-});

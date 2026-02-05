@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  StyleSheet,
   View,
   Text,
   TextInput,
@@ -118,10 +117,15 @@ export default function TaskDetailScreen() {
 
   if (!task) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Task not found</Text>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>Go Back</Text>
+      <View className="flex-1 items-center justify-center p-5 bg-background">
+        <Text className="text-base text-text-secondary mb-4">
+          Task not found
+        </Text>
+        <Pressable
+          className="py-2.5 px-5 bg-primary rounded-lg"
+          onPress={() => router.back()}
+        >
+          <Text className="text-white font-semibold">Go Back</Text>
         </Pressable>
       </View>
     );
@@ -241,52 +245,62 @@ export default function TaskDetailScreen() {
           headerRight: () => (
             <Pressable
               onPress={handleDeleteTask}
-              style={styles.deleteButton}
+              className="p-2"
               accessibilityLabel="Delete task"
               accessibilityRole="button"
             >
-              <FontAwesome name="trash" size={20} color="#FF3B30" />
+              <FontAwesome
+                name="trash"
+                size={20}
+                color="rgb(var(--color-danger))"
+              />
             </Pressable>
           ),
         }}
       />
 
       <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
+        className="flex-1 bg-background"
+        contentContainerStyle={{ padding: 16 }}
       >
         {/* Task Title */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Title</Text>
+        <View className="mb-6">
+          <Text className="text-[13px] font-semibold text-text-secondary uppercase tracking-wide mb-2">
+            Title
+          </Text>
           <TextInput
-            style={styles.titleInput}
+            className="text-lg font-medium text-text bg-surface-secondary p-3 rounded-lg border border-border"
             value={title}
             onChangeText={setTitle}
             onBlur={handleSaveTitle}
             placeholder="Task title..."
+            placeholderTextColor="rgb(var(--color-text-muted))"
             returnKeyType="done"
             onSubmitEditing={handleSaveTitle}
           />
         </View>
 
         {/* Category Picker */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Category</Text>
-          <View style={styles.categoryList}>
+        <View className="mb-6">
+          <Text className="text-[13px] font-semibold text-text-secondary uppercase tracking-wide mb-2">
+            Category
+          </Text>
+          <View className="flex-row flex-wrap gap-2">
             {/* Uncategorized option */}
             <Pressable
-              style={[
-                styles.categoryOption,
-                selectedCategoryId === null && styles.categoryOptionSelected,
-              ]}
+              className={`py-2 px-3.5 rounded-2xl border ${
+                selectedCategoryId === null
+                  ? "bg-primary border-primary"
+                  : "bg-surface-secondary border-border"
+              }`}
               onPress={() => handleCategoryChange(null)}
             >
               <Text
-                style={[
-                  styles.categoryOptionText,
-                  selectedCategoryId === null &&
-                    styles.categoryOptionTextSelected,
-                ]}
+                className={`text-sm font-medium ${
+                  selectedCategoryId === null
+                    ? "text-white"
+                    : "text-text-secondary"
+                }`}
               >
                 Uncategorized
               </Text>
@@ -296,19 +310,19 @@ export default function TaskDetailScreen() {
             {categories.map((cat) => (
               <Pressable
                 key={cat.id}
-                style={[
-                  styles.categoryOption,
-                  selectedCategoryId === cat.id &&
-                    styles.categoryOptionSelected,
-                ]}
+                className={`py-2 px-3.5 rounded-2xl border ${
+                  selectedCategoryId === cat.id
+                    ? "bg-primary border-primary"
+                    : "bg-surface-secondary border-border"
+                }`}
                 onPress={() => handleCategoryChange(cat.id)}
               >
                 <Text
-                  style={[
-                    styles.categoryOptionText,
-                    selectedCategoryId === cat.id &&
-                      styles.categoryOptionTextSelected,
-                  ]}
+                  className={`text-sm font-medium ${
+                    selectedCategoryId === cat.id
+                      ? "text-white"
+                      : "text-text-secondary"
+                  }`}
                 >
                   {cat.name}
                 </Text>
@@ -319,18 +333,21 @@ export default function TaskDetailScreen() {
 
         {/* Position - only show if more than one sibling */}
         {siblingTasks.length > 1 && (
-          <View style={styles.section}>
-            <Text style={styles.label}>Position</Text>
-            <View style={styles.positionRow}>
-              <Text style={styles.positionText}>
+          <View className="mb-6">
+            <Text className="text-[13px] font-semibold text-text-secondary uppercase tracking-wide mb-2">
+              Position
+            </Text>
+            <View className="flex-row items-center justify-between bg-surface-secondary p-3 rounded-lg">
+              <Text className="text-base text-text font-medium">
                 {currentPosition} of {siblingTasks.length}
               </Text>
-              <View style={styles.positionButtons}>
+              <View className="flex-row gap-2">
                 <Pressable
-                  style={[
-                    styles.positionButton,
-                    !canMoveUp && styles.positionButtonDisabled,
-                  ]}
+                  className={`w-9 h-9 rounded-full items-center justify-center border ${
+                    canMoveUp
+                      ? "bg-surface border-border"
+                      : "bg-surface-secondary border-border/50"
+                  }`}
                   onPress={handleMoveUp}
                   disabled={!canMoveUp}
                   accessibilityLabel="Move task up"
@@ -340,14 +357,19 @@ export default function TaskDetailScreen() {
                   <FontAwesome
                     name="chevron-up"
                     size={16}
-                    color={canMoveUp ? "#007AFF" : "#ccc"}
+                    color={
+                      canMoveUp
+                        ? "rgb(var(--color-primary))"
+                        : "rgb(var(--color-text-muted))"
+                    }
                   />
                 </Pressable>
                 <Pressable
-                  style={[
-                    styles.positionButton,
-                    !canMoveDown && styles.positionButtonDisabled,
-                  ]}
+                  className={`w-9 h-9 rounded-full items-center justify-center border ${
+                    canMoveDown
+                      ? "bg-surface border-border"
+                      : "bg-surface-secondary border-border/50"
+                  }`}
                   onPress={handleMoveDown}
                   disabled={!canMoveDown}
                   accessibilityLabel="Move task down"
@@ -357,7 +379,11 @@ export default function TaskDetailScreen() {
                   <FontAwesome
                     name="chevron-down"
                     size={16}
-                    color={canMoveDown ? "#007AFF" : "#ccc"}
+                    color={
+                      canMoveDown
+                        ? "rgb(var(--color-primary))"
+                        : "rgb(var(--color-text-muted))"
+                    }
                   />
                 </Pressable>
               </View>
@@ -368,48 +394,61 @@ export default function TaskDetailScreen() {
         {/* Nest/Unnest Section */}
         {isSubtask ? (
           // Show parent info and unnest button for subtasks
-          <View style={styles.section}>
-            <Text style={styles.label}>Parent Task</Text>
-            <View style={styles.parentInfoRow}>
-              <Text style={styles.parentName} numberOfLines={1}>
+          <View className="mb-6">
+            <Text className="text-[13px] font-semibold text-text-secondary uppercase tracking-wide mb-2">
+              Parent Task
+            </Text>
+            <View className="bg-surface-secondary p-3 rounded-lg mb-2">
+              <Text
+                className="text-[15px] text-text font-medium"
+                numberOfLines={1}
+              >
                 {parentTask?.title ?? "Unknown"}
               </Text>
             </View>
-            <Pressable style={styles.unnestButton} onPress={handleUnnest}>
+            <Pressable
+              className="flex-row items-center p-3 bg-primary/10 rounded-lg border border-primary"
+              onPress={handleUnnest}
+            >
               <FontAwesome
                 name="level-up"
                 size={14}
-                color="#007AFF"
-                style={styles.unnestIcon}
+                color="rgb(var(--color-primary))"
+                style={{ marginRight: 8, transform: [{ rotate: "90deg" }] }}
               />
-              <Text style={styles.unnestButtonText}>
+              <Text className="text-[15px] text-primary font-medium">
                 Convert to Top-Level Task
               </Text>
             </Pressable>
           </View>
         ) : potentialParents.length > 0 ? (
           // Show nest options for top-level tasks
-          <View style={styles.section}>
-            <Text style={styles.label}>Make Subtask Of</Text>
+          <View className="mb-6">
+            <Text className="text-[13px] font-semibold text-text-secondary uppercase tracking-wide mb-2">
+              Make Subtask Of
+            </Text>
             {potentialParents.slice(0, 5).map((parent) => (
               <Pressable
                 key={parent.id}
-                style={styles.nestOption}
+                className="flex-row items-center p-3 bg-surface-secondary rounded-lg mb-1.5"
                 onPress={() => handleNestUnder(parent.id)}
               >
                 <FontAwesome
                   name="level-down"
                   size={14}
-                  color="#666"
-                  style={styles.nestIcon}
+                  color="rgb(var(--color-text-secondary))"
+                  style={{ marginRight: 10, transform: [{ rotate: "-90deg" }] }}
                 />
-                <Text style={styles.nestOptionText} numberOfLines={1}>
+                <Text
+                  className="flex-1 text-[15px] text-text"
+                  numberOfLines={1}
+                >
                   {parent.title}
                 </Text>
               </Pressable>
             ))}
             {potentialParents.length > 5 && (
-              <Text style={styles.moreHint}>
+              <Text className="text-[13px] text-text-muted italic pl-1 mt-1">
                 +{potentialParents.length - 5} more tasks
               </Text>
             )}
@@ -417,78 +456,93 @@ export default function TaskDetailScreen() {
         ) : null}
 
         {/* Completion Status */}
-        <View style={styles.section}>
+        <View className="mb-6">
           <Pressable
-            style={styles.completionRow}
+            className="flex-row items-center p-3 bg-surface-secondary rounded-lg"
             onPress={() => toggleTask(task.id)}
           >
             <View
-              style={[
-                styles.checkbox,
-                task.completed && styles.checkboxChecked,
-              ]}
+              className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
+                task.completed
+                  ? "bg-primary border-primary"
+                  : "border-text-muted"
+              }`}
             >
-              {task.completed && <Text style={styles.checkmark}>✓</Text>}
+              {task.completed && (
+                <Text className="text-white text-sm font-bold">✓</Text>
+              )}
             </View>
-            <Text style={styles.completionText}>
+            <Text className="text-base text-text">
               {task.completed ? "Completed" : "Mark as complete"}
             </Text>
           </Pressable>
         </View>
 
         {/* Subtasks */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Subtasks ({subtasks.length})</Text>
+        <View className="mb-6">
+          <Text className="text-[13px] font-semibold text-text-secondary uppercase tracking-wide mb-2">
+            Subtasks ({subtasks.length})
+          </Text>
 
           {/* Subtask List */}
           {subtasks.map((subtask) => (
             <Pressable
               key={subtask.id}
-              style={styles.subtaskRow}
+              className="flex-row items-center py-2.5 border-b border-border"
               onPress={() => toggleTask(subtask.id)}
             >
               <View
-                style={[
-                  styles.subtaskCheckbox,
-                  subtask.completed && styles.checkboxChecked,
-                ]}
+                className={`w-5 h-5 rounded-full border-2 mr-2.5 items-center justify-center ${
+                  subtask.completed
+                    ? "bg-primary border-primary"
+                    : "border-text-muted"
+                }`}
               >
-                {subtask.completed && <Text style={styles.checkmark}>✓</Text>}
+                {subtask.completed && (
+                  <Text className="text-white text-xs font-bold">✓</Text>
+                )}
               </View>
               <Text
-                style={[
-                  styles.subtaskTitle,
-                  subtask.completed && styles.subtaskTitleCompleted,
-                ]}
+                className={`flex-1 text-[15px] ${
+                  subtask.completed
+                    ? "text-text-muted line-through"
+                    : "text-text"
+                }`}
               >
                 {subtask.title}
               </Text>
               <Pressable
-                style={styles.subtaskDelete}
+                className="p-2"
                 onPress={() => handleDeleteSubtask(subtask.id, subtask.title)}
                 accessibilityLabel={`Delete subtask ${subtask.title}`}
                 accessibilityRole="button"
               >
-                <FontAwesome name="times" size={16} color="#999" />
+                <FontAwesome
+                  name="times"
+                  size={16}
+                  color="rgb(var(--color-text-muted))"
+                />
               </Pressable>
             </Pressable>
           ))}
 
           {/* Add Subtask Input */}
-          <View style={styles.addSubtaskRow}>
+          <View className="flex-row items-center mt-2">
             <TextInput
-              style={styles.addSubtaskInput}
+              className="flex-1 h-10 px-3 bg-surface-secondary rounded-lg text-[15px] mr-2 text-text"
               value={newSubtaskTitle}
               onChangeText={setNewSubtaskTitle}
               placeholder="Add subtask..."
+              placeholderTextColor="rgb(var(--color-text-muted))"
               returnKeyType="done"
               onSubmitEditing={handleAddSubtask}
             />
             <Pressable
-              style={[
-                styles.addSubtaskButton,
-                !newSubtaskTitle.trim() && styles.addSubtaskButtonDisabled,
-              ]}
+              className={`w-10 h-10 rounded-full items-center justify-center ${
+                newSubtaskTitle.trim()
+                  ? "bg-surface-secondary"
+                  : "bg-surface-secondary opacity-50"
+              }`}
               onPress={handleAddSubtask}
               disabled={!newSubtaskTitle.trim()}
               accessibilityLabel="Add subtask"
@@ -498,7 +552,11 @@ export default function TaskDetailScreen() {
               <FontAwesome
                 name="plus"
                 size={16}
-                color={newSubtaskTitle.trim() ? "#007AFF" : "#ccc"}
+                color={
+                  newSubtaskTitle.trim()
+                    ? "rgb(var(--color-primary))"
+                    : "rgb(var(--color-text-muted))"
+                }
               />
             </Pressable>
           </View>
@@ -507,253 +565,3 @@ export default function TaskDetailScreen() {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  content: {
-    padding: 16,
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 16,
-  },
-  backButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: "#007AFF",
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  deleteButton: {
-    padding: 8,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#666",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  titleInput: {
-    fontSize: 18,
-    fontWeight: "500",
-    color: "#333",
-    backgroundColor: "#f8f8f8",
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e8e8e8",
-  },
-  categoryList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  categoryOption: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-  categoryOptionSelected: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
-  },
-  categoryOptionText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#666",
-  },
-  categoryOptionTextSelected: {
-    color: "#fff",
-  },
-  completionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    backgroundColor: "#f8f8f8",
-    borderRadius: 8,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#ccc",
-    marginRight: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxChecked: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
-  },
-  checkmark: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  completionText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  subtaskRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  subtaskCheckbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#ccc",
-    marginRight: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  subtaskTitle: {
-    flex: 1,
-    fontSize: 15,
-    color: "#333",
-  },
-  subtaskTitleCompleted: {
-    color: "#999",
-    textDecorationLine: "line-through",
-  },
-  subtaskDelete: {
-    padding: 8,
-  },
-  addSubtaskRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  addSubtaskInput: {
-    flex: 1,
-    height: 40,
-    paddingHorizontal: 12,
-    backgroundColor: "#f8f8f8",
-    borderRadius: 8,
-    fontSize: 15,
-    marginRight: 8,
-  },
-  addSubtaskButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#f0f0f0",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addSubtaskButtonDisabled: {
-    opacity: 0.5,
-  },
-  // Position section styles
-  positionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#f8f8f8",
-    padding: 12,
-    borderRadius: 8,
-  },
-  positionText: {
-    fontSize: 16,
-    color: "#333",
-    fontWeight: "500",
-  },
-  positionButtons: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  positionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  positionButtonDisabled: {
-    backgroundColor: "#f8f8f8",
-    borderColor: "#eee",
-  },
-  // Nest/Unnest section styles
-  parentInfoRow: {
-    backgroundColor: "#f8f8f8",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  parentName: {
-    fontSize: 15,
-    color: "#333",
-    fontWeight: "500",
-  },
-  unnestButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    backgroundColor: "#EBF5FF",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#007AFF",
-  },
-  unnestIcon: {
-    marginRight: 8,
-    transform: [{ rotate: "90deg" }],
-  },
-  unnestButtonText: {
-    fontSize: 15,
-    color: "#007AFF",
-    fontWeight: "500",
-  },
-  nestOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    backgroundColor: "#f8f8f8",
-    borderRadius: 8,
-    marginBottom: 6,
-  },
-  nestIcon: {
-    marginRight: 10,
-    transform: [{ rotate: "-90deg" }],
-  },
-  nestOptionText: {
-    flex: 1,
-    fontSize: 15,
-    color: "#333",
-  },
-  moreHint: {
-    fontSize: 13,
-    color: "#999",
-    fontStyle: "italic",
-    paddingLeft: 4,
-    marginTop: 4,
-  },
-});

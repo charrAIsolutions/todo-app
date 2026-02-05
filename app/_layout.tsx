@@ -2,7 +2,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
   DarkTheme,
   DefaultTheme,
-  ThemeProvider,
+  ThemeProvider as NavigationThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
@@ -10,9 +10,10 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
+import "./global.css";
 
-import { useColorScheme } from "@/components/useColorScheme";
 import { AppProvider } from "@/store/AppContext";
+import { ThemeProvider, useThemeContext } from "@/store/ThemeContext";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -52,28 +53,36 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AppProvider>
-        <ThemeProvider
-          value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-        >
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: "modal" }} />
-            <Stack.Screen
-              name="task/[id]"
-              options={{
-                presentation: "modal",
-                title: "Task Details",
-                animation: "slide_from_bottom",
-              }}
-            />
-          </Stack>
-        </ThemeProvider>
-      </AppProvider>
+      <ThemeProvider>
+        <AppProvider>
+          <ThemedNavigator />
+        </AppProvider>
+      </ThemeProvider>
     </GestureHandlerRootView>
+  );
+}
+
+function ThemedNavigator() {
+  const { effectiveScheme } = useThemeContext();
+
+  return (
+    <NavigationThemeProvider
+      value={effectiveScheme === "dark" ? DarkTheme : DefaultTheme}
+    >
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+        <Stack.Screen
+          name="task/[id]"
+          options={{
+            presentation: "modal",
+            title: "Task Details",
+            animation: "slide_from_bottom",
+          }}
+        />
+      </Stack>
+    </NavigationThemeProvider>
   );
 }
