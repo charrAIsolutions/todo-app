@@ -1,4 +1,4 @@
-import { ScrollView, Pressable, StyleSheet, View } from "react-native";
+import { ScrollView, Pressable, View } from "react-native";
 import { TodoList } from "@/types/todo";
 import { ListTab } from "./ListTab";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
@@ -30,12 +30,16 @@ export function ListTabBar({
   const sortedLists = [...lists].sort((a, b) => a.sortOrder - b.sortOrder);
 
   return (
-    <View style={styles.container}>
+    <View className="flex-row items-center border-b border-border bg-surface-secondary">
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        style={styles.scrollView}
+        contentContainerStyle={{
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          alignItems: "center",
+        }}
+        className="flex-1"
       >
         {sortedLists.map((list) => (
           <ListTab
@@ -60,46 +64,15 @@ export function ListTabBar({
         {/* Add List Button */}
         <Pressable
           onPress={onAddList}
-          style={({ pressed }) => [
-            styles.addButton,
-            pressed && styles.addButtonPressed,
-          ]}
+          className="w-9 h-9 rounded-full bg-primary/10 items-center justify-center ml-2 active:opacity-70"
         >
-          <FontAwesome name="plus" size={16} color="#007AFF" />
+          <FontAwesome
+            name="plus"
+            size={16}
+            color="rgb(var(--color-primary))"
+          />
         </Pressable>
       </ScrollView>
-
-      {/* Settings Button - moved into each list tab */}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-    backgroundColor: "#f8f8f8",
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    alignItems: "center",
-  },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#e8f4ff",
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 8,
-  },
-  addButtonPressed: {
-    opacity: 0.7,
-  },
-});

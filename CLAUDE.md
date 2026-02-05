@@ -1,6 +1,6 @@
-# Last updated: January 2026
+# Last updated: February 2026
 
-# Version: 0.0.7.2
+# Version: 0.0.8.0
 
 <!-- It is 2026, not 2025 -->
 
@@ -10,7 +10,7 @@
 
 Personal to-do application built for learning proper React Native patterns.
 
-- **Stack**: Expo (React Native), TypeScript, NativeWind (Tailwind CSS)
+- **Stack**: Expo (React Native), TypeScript, NativeWind v4 (Tailwind CSS)
 - **Platforms**: iOS, Android, Web (single codebase)
 - **User**: Single user (Charles), no auth required initially
 
@@ -27,25 +27,31 @@ You are a senior React Native developer and mentor. Your student (Charles) is a 
 ## Tech Stack Details
 
 - **Expo SDK**: 54 (managed workflow)
-- **Styling**: StyleSheet.create() currently; NativeWind v4 planned for later
+- **Styling**: NativeWind v4 with CSS variables for theming
 - **State**: React Context + useReducer (in `store/AppContext.tsx`)
 - **Storage**: AsyncStorage via `@react-native-async-storage/async-storage`
 - **Navigation**: Expo Router (file-based routing)
+- **Theming**: NativeWind + ThemeContext for light/dark mode support
 
 ## Project Structure
 
 ```
 app/                    # Expo Router screens (file-based routing)
   (tabs)/               # Tab navigation group
-  _layout.tsx           # Root layout
+  _layout.tsx           # Root layout (wraps with ThemeProvider)
+  global.css            # CSS variables for light/dark colors
 components/             # Reusable UI components
-  ui/                   # Base UI primitives (Button, Input, Card, etc.)
+  drag/                 # Drag-and-drop components
 hooks/                  # Custom React hooks
+  useTheme.ts           # Theme hook for preference & effective scheme
 lib/                    # Utilities, helpers, constants
-  storage.ts            # AsyncStorage/SecureStore wrappers
+  storage.ts            # AsyncStorage wrappers (includes theme preference)
   utils.ts              # General utilities
-store/                  # State management (context or Zustand)
+store/                  # State management
+  AppContext.tsx        # App state (lists, tasks)
+  ThemeContext.tsx      # Theme state (light/dark/system)
 types/                  # TypeScript type definitions
+  theme.ts              # ThemePreference, ColorScheme types
 ```
 
 ## Code Conventions
@@ -66,11 +72,43 @@ types/                  # TypeScript type definitions
 ### NativeWind Patterns
 
 ```tsx
-// Prefer className over style prop
-<View className="flex-1 bg-white p-4">
-  <Text className="text-lg font-bold text-gray-900">Title</Text>
+// Use semantic color tokens from tailwind.config.js
+<View className="flex-1 bg-background p-4">
+  <Text className="text-lg font-bold text-text">Title</Text>
+  <Text className="text-text-secondary">Subtitle</Text>
 </View>
+
+// Dark mode is automatic via CSS variables
+// No need for dark: prefix - colors swap automatically
 ```
+
+### Theme System
+
+The app uses NativeWind v4 with CSS variables for automatic theming:
+
+```typescript
+// In components, colors adapt automatically
+<View className="bg-surface text-text" />
+
+// Access theme state when needed
+const { preference, effectiveScheme, setPreference } = useTheme();
+
+// Theme values: "light" | "dark" | "system"
+setPreference("dark"); // Force dark mode
+setPreference("system"); // Follow device
+```
+
+**Semantic Color Tokens:**
+
+- `background` - Main page background
+- `surface` - Card/container background
+- `surface-secondary` - Input fields, secondary surfaces
+- `text` - Primary text color
+- `text-secondary` - Secondary/dimmed text
+- `text-muted` - Placeholder, disabled text
+- `border` - Borders, dividers
+- `primary` - Brand/accent color (blue)
+- `success`, `warning`, `danger` - Status colors
 
 ### File Naming
 
@@ -308,9 +346,36 @@ interface Task {
 - Cross-list drag-and-drop (drag stays within single list)
 - Multi-list view on mobile
 
+### Phase 8: Dark Mode with NativeWind v4 ✓
+
+- Full NativeWind v4 migration from StyleSheet.create()
+- `tailwind.config.js` - Semantic color tokens with CSS variable support
+- `app/global.css` - CSS variables for light/dark color schemes
+- `store/ThemeContext.tsx` - Theme state management (light/dark/system)
+- `hooks/useTheme.ts` - Hook for accessing theme preference and effective scheme
+- `types/theme.ts` - ThemePreference and ColorScheme types
+- `lib/storage.ts` - Theme preference persistence
+
+**Key files migrated:**
+
+- All components now use NativeWind className instead of StyleSheet
+- `app/(tabs)/index.tsx` - Main screen fully converted
+- `app/task/[id].tsx` - Task detail fully converted
+- `app/modal.tsx` - Settings screen with theme toggle
+
+**Working:**
+
+- ✅ Theme toggle in Settings modal (Light/Dark/System)
+- ✅ Theme preference persists across app restarts
+- ✅ System preference detection and following
+- ✅ All screens and components use semantic color tokens
+- ✅ Dark mode colors properly defined in global.css
+- ✅ NativeWind colorScheme.set() for programmatic control
+- ✅ React Navigation theme synced with app theme
+
 ## Current State
 
-**Done (Phases 1-7):**
+**Done (Phases 1-8):**
 
 - Full data model with lists, categories, tasks, subtasks
 - Multi-list tabs with web split-view
@@ -318,6 +383,7 @@ interface Task {
 - Task detail modal with all CRUD operations
 - "Show on open" for web launch preferences
 - Local storage persistence
+- Dark mode with NativeWind v4
 
 **In Progress:**
 
@@ -325,13 +391,12 @@ interface Task {
 
 **Next (suggested):**
 
-- Phase 8: Polish & UX improvements (animations, empty states, onboarding)
 - Phase 9: iOS App Store deployment (EAS Build, app icons, splash screens)
 - Phase 10: Cloud sync (optional - requires auth)
 
 ## Phases
 
-(Phases 1-7 complete)
+(Phases 1-8 complete)
 
 ## Versioning
 
@@ -339,12 +404,12 @@ Format: `Release.PreRelease.Phase.Change`
 
 - **Release** (0): Major release version (0 = pre-release)
 - **PreRelease** (0): Stable pre-release version (0 = unstable)
-- **Phase** (7): Development phase number
-- **Change** (2): Incremental change within phase
+- **Phase** (8): Development phase number
+- **Change** (0): Incremental change within phase
 
-Example: `0.0.7.2` = Release 0, PreRelease 0, Phase 7, Change 2
+Example: `0.0.8.0` = Release 0, PreRelease 0, Phase 8, Change 0
 
-Display title shows full version (0.0.7.2), package.json uses semver (0.0.7).
+Display title shows full version (0.0.8.0), package.json uses semver (0.0.8).
 
 ## Notes
 

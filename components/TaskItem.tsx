@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { Pressable, View } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -31,7 +31,13 @@ export function TaskItem({
   onPress,
   indentLevel = 0,
 }: TaskItemProps) {
-  const indent = indentLevel === 1 ? 12 : indentLevel === 2 ? 32 : 0;
+  // Calculate margin based on indent level
+  const marginStyle =
+    indentLevel === 1
+      ? { marginLeft: 12 }
+      : indentLevel === 2
+        ? { marginLeft: 32 }
+        : undefined;
 
   // Animation shared values
   const checkboxScale = useSharedValue(1);
@@ -90,17 +96,21 @@ export function TaskItem({
 
   return (
     <Pressable
-      style={[styles.container, { marginLeft: indent }]}
+      className="flex-row items-center py-3 px-1 border-b border-border"
+      style={marginStyle}
       onPress={onPress ?? handleToggle}
     >
       {/* Animated Checkbox */}
       <Pressable onPress={handleToggle}>
-        <Animated.View style={[styles.checkbox, checkboxAnimatedStyle]}>
+        <Animated.View
+          className="w-6 h-6 rounded-full border-2 mr-3 items-center justify-center"
+          style={checkboxAnimatedStyle}
+        >
           {task.completed && (
             <Animated.Text
               entering={FadeIn.duration(DURATION.fast)}
               exiting={FadeOut.duration(DURATION.fast)}
-              style={styles.checkmark}
+              className="text-white text-sm font-bold"
             >
               ✓
             </Animated.Text>
@@ -110,11 +120,8 @@ export function TaskItem({
 
       {/* Title with animated color and opacity */}
       <Animated.Text
-        style={[
-          styles.title,
-          task.completed && styles.titleStrikethrough,
-          titleAnimatedStyle,
-        ]}
+        className={`flex-1 text-base ${task.completed ? "line-through" : ""}`}
+        style={titleAnimatedStyle}
         numberOfLines={2}
       >
         {task.title}
@@ -122,38 +129,3 @@ export function TaskItem({
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#ccc",
-    marginRight: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkmark: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  title: {
-    flex: 1,
-    fontSize: 16,
-    color: "#333",
-  },
-  // Only strikethrough - color is now animated via titleAnimatedStyle
-  titleStrikethrough: {
-    textDecorationLine: "line-through",
-  },
-});

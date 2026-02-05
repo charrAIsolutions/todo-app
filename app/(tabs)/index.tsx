@@ -1,6 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import {
-  StyleSheet,
   View,
   Text,
   ScrollView,
@@ -364,8 +363,8 @@ export default function TodoScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.loadingText}>Loading...</Text>
+      <View className="flex-1 items-center justify-center bg-background">
+        <Text className="text-base text-text-secondary">Loading...</Text>
       </View>
     );
   }
@@ -394,12 +393,18 @@ export default function TodoScreen() {
     const listUncategorizedTasks = listTasksByCategory.get(null) ?? [];
 
     return (
-      <View key={listId} style={[styles.listPane, { width: paneWidth }]}>
-        <Text style={styles.listTitle}>{list.name}</Text>
+      <View
+        key={listId}
+        className="bg-surface rounded-xl border border-border overflow-hidden"
+        style={{ width: paneWidth }}
+      >
+        <Text className="text-lg font-bold text-text px-4 pt-4 pb-2">
+          {list.name}
+        </Text>
         <DragProvider onDragEnd={handleDragEnd}>
           <ScrollView
-            style={styles.taskList}
-            contentContainerStyle={styles.taskListContent}
+            className="flex-1"
+            contentContainerStyle={{ padding: 16, paddingTop: 0 }}
           >
             {/* Render each category section (even when empty for drag-drop targets) */}
             {listCategories.map((category) => {
@@ -433,9 +438,11 @@ export default function TodoScreen() {
 
             {/* Empty state only when no categories and no tasks */}
             {listCategories.length === 0 && !listHasTasks && (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>No tasks yet</Text>
-                <Text style={styles.emptyStateHint}>
+              <View className="flex-1 items-center justify-center py-16">
+                <Text className="text-lg font-semibold text-text mb-2">
+                  No tasks yet
+                </Text>
+                <Text className="text-sm text-text-secondary">
                   Add your first task below
                 </Text>
               </View>
@@ -450,7 +457,7 @@ export default function TodoScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      className="flex-1 bg-background"
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {/* List Tab Bar */}
@@ -466,17 +473,18 @@ export default function TodoScreen() {
 
       {/* New List Input (shown when creating) */}
       {isCreatingList && (
-        <View style={styles.newListContainer}>
+        <View className="p-4 bg-primary/10 border-b border-primary/30">
           <TextInput
-            style={styles.newListInput}
+            className="h-11 px-4 bg-surface rounded-lg text-base border border-primary text-text"
             value={newListName}
             onChangeText={setNewListName}
             placeholder="New list name..."
+            placeholderTextColor="rgb(var(--color-text-muted))"
             autoFocus
             onSubmitEditing={handleCreateList}
             returnKeyType="done"
           />
-          <Text style={styles.newListHint}>
+          <Text className="text-xs text-text-secondary mt-2 text-center">
             Press enter to create, or tap elsewhere to cancel
           </Text>
         </View>
@@ -486,15 +494,21 @@ export default function TodoScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator
-          contentContainerStyle={styles.splitViewContent}
-          style={styles.splitView}
+          contentContainerStyle={{
+            padding: 16,
+            gap: 16,
+            alignItems: "stretch",
+          }}
+          className="flex-1"
         >
           {listIdsToRender.length > 0 ? (
             listIdsToRender.map((listId) => renderListPane(listId))
           ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No list selected</Text>
-              <Text style={styles.emptyStateHint}>
+            <View className="flex-1 items-center justify-center py-16">
+              <Text className="text-lg font-semibold text-text mb-2">
+                No list selected
+              </Text>
+              <Text className="text-sm text-text-secondary">
                 Create a list using the + button above
               </Text>
             </View>
@@ -505,8 +519,8 @@ export default function TodoScreen() {
           {/* Task List with Drag-and-Drop */}
           <DragProvider onDragEnd={handleDragEnd}>
             <ScrollView
-              style={styles.taskList}
-              contentContainerStyle={styles.taskListContent}
+              className="flex-1"
+              contentContainerStyle={{ padding: 16, paddingTop: 0 }}
             >
               {activeList ? (
                 <>
@@ -543,18 +557,22 @@ export default function TodoScreen() {
 
                   {/* Empty state only when no categories and no tasks */}
                   {categories.length === 0 && !hasAnyTasks && (
-                    <View style={styles.emptyState}>
-                      <Text style={styles.emptyStateText}>No tasks yet</Text>
-                      <Text style={styles.emptyStateHint}>
+                    <View className="flex-1 items-center justify-center py-16">
+                      <Text className="text-lg font-semibold text-text mb-2">
+                        No tasks yet
+                      </Text>
+                      <Text className="text-sm text-text-secondary">
                         Add your first task below
                       </Text>
                     </View>
                   )}
                 </>
               ) : (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateText}>No list selected</Text>
-                  <Text style={styles.emptyStateHint}>
+                <View className="flex-1 items-center justify-center py-16">
+                  <Text className="text-lg font-semibold text-text mb-2">
+                    No list selected
+                  </Text>
+                  <Text className="text-sm text-text-secondary">
                     Create a list using the + button above
                   </Text>
                 </View>
@@ -578,55 +596,70 @@ export default function TodoScreen() {
         animationType="fade"
         onRequestClose={handleCloseSettings}
       >
-        <Pressable style={styles.modalOverlay} onPress={handleCloseSettings}>
+        <Pressable
+          className="flex-1 bg-black/50 justify-center items-center"
+          onPress={handleCloseSettings}
+        >
           <Pressable
-            style={styles.modalContent}
+            className="bg-surface rounded-2xl p-6 w-[90%] max-w-[400px] shadow-lg"
             onPress={(e) => e.stopPropagation()}
           >
             {!showDeleteConfirm ? (
               <>
-                <Text style={styles.modalTitle}>List Settings</Text>
-                <Text style={styles.modalListName}>{settingsList?.name}</Text>
+                <Text className="text-[13px] font-semibold text-text-secondary uppercase tracking-wide mb-1">
+                  List Settings
+                </Text>
+                <Text className="text-2xl font-bold text-text mb-6">
+                  {settingsList?.name}
+                </Text>
 
                 {/* Rename Section */}
                 {isRenaming ? (
-                  <View style={styles.renameContainer}>
+                  <View className="mb-3">
                     <TextInput
-                      style={styles.renameInput}
+                      className="h-11 px-3 bg-surface-secondary rounded-lg text-base border border-primary mb-3 text-text"
                       value={renameValue}
                       onChangeText={setRenameValue}
                       autoFocus
                       onSubmitEditing={handleRenameList}
                       returnKeyType="done"
                     />
-                    <View style={styles.renameButtons}>
+                    <View className="flex-row justify-end gap-3">
                       <Pressable
-                        style={styles.cancelButton}
+                        className="py-2.5 px-4"
                         onPress={() => setIsRenaming(false)}
                       >
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                        <Text className="text-base text-text-secondary">
+                          Cancel
+                        </Text>
                       </Pressable>
                       <Pressable
-                        style={styles.saveButton}
+                        className="py-2.5 px-5 bg-primary rounded-lg"
                         onPress={handleRenameList}
                       >
-                        <Text style={styles.saveButtonText}>Save</Text>
+                        <Text className="text-base text-white font-semibold">
+                          Save
+                        </Text>
                       </Pressable>
                     </View>
                   </View>
                 ) : (
                   <Pressable
-                    style={styles.settingsOption}
+                    className="py-3.5 px-4 bg-surface-secondary rounded-lg mb-3"
                     onPress={() => setIsRenaming(true)}
                   >
-                    <Text style={styles.settingsOptionText}>Rename List</Text>
+                    <Text className="text-base font-medium text-text">
+                      Rename List
+                    </Text>
                   </Pressable>
                 )}
 
-                <View style={styles.settingsToggleRow}>
+                <View className="py-3 px-4 bg-surface-secondary rounded-lg mb-3 flex-row items-center justify-between gap-4">
                   <View>
-                    <Text style={styles.settingsToggleTitle}>Show on open</Text>
-                    <Text style={styles.settingsToggleHint}>
+                    <Text className="text-[15px] font-semibold text-text">
+                      Show on open
+                    </Text>
+                    <Text className="text-xs text-text-secondary mt-1">
                       Display this list when the app launches on web
                     </Text>
                   </View>
@@ -640,8 +673,10 @@ export default function TodoScreen() {
                 </View>
 
                 {/* Categories Section */}
-                <View style={styles.categoriesSection}>
-                  <Text style={styles.categoriesSectionTitle}>CATEGORIES</Text>
+                <View className="mb-4 pt-2 border-t border-border">
+                  <Text className="text-xs font-semibold text-text-muted tracking-wide mb-3 mt-2">
+                    CATEGORIES
+                  </Text>
 
                   {settingsCategories.map((category, index) => {
                     const isFirst = index === 0;
@@ -652,31 +687,32 @@ export default function TodoScreen() {
 
                     if (isDeleting) {
                       return (
-                        <View key={category.id} style={styles.categoryRow}>
-                          <View style={styles.categoryDeleteConfirm}>
-                            <Text style={styles.categoryDeleteText}>
+                        <View
+                          key={category.id}
+                          className="flex-row items-center bg-surface-secondary rounded-lg py-2.5 px-3 mb-2 min-h-[44px]"
+                        >
+                          <View className="flex-1">
+                            <Text className="text-sm text-text-secondary mb-2">
                               Delete "{category.name}"?
                               {taskCount > 0 &&
                                 ` ${taskCount} task${taskCount !== 1 ? "s" : ""} will move to Uncategorized.`}
                             </Text>
-                            <View style={styles.categoryDeleteButtons}>
+                            <View className="flex-row justify-end gap-2">
                               <Pressable
-                                style={styles.categoryDeleteCancel}
+                                className="py-1.5 px-3 rounded-md bg-border"
                                 onPress={() => setDeletingCategoryId(null)}
                               >
-                                <Text style={styles.categoryDeleteCancelText}>
+                                <Text className="text-sm text-text">
                                   Cancel
                                 </Text>
                               </Pressable>
                               <Pressable
-                                style={styles.categoryDeleteConfirmBtn}
+                                className="py-1.5 px-3 rounded-md bg-danger"
                                 onPress={() =>
                                   handleDeleteCategory(category.id)
                                 }
                               >
-                                <Text
-                                  style={styles.categoryDeleteConfirmBtnText}
-                                >
+                                <Text className="text-sm font-semibold text-white">
                                   Delete
                                 </Text>
                               </Pressable>
@@ -688,35 +724,35 @@ export default function TodoScreen() {
 
                     if (isEditing) {
                       return (
-                        <View key={category.id} style={styles.categoryRow}>
+                        <View
+                          key={category.id}
+                          className="flex-row items-center bg-surface-secondary rounded-lg py-2.5 px-3 mb-2 min-h-[44px]"
+                        >
                           <TextInput
-                            style={styles.categoryEditInput}
+                            className="flex-1 h-9 px-2.5 bg-surface rounded-md text-[15px] border border-primary text-text"
                             value={editCategoryValue}
                             onChangeText={setEditCategoryValue}
                             autoFocus
                             onSubmitEditing={handleSaveCategory}
                             returnKeyType="done"
                           />
-                          <View style={styles.categoryEditButtons}>
+                          <View className="flex-row items-center ml-2 gap-1.5">
                             <Pressable
-                              style={styles.categoryActionBtn}
+                              className="py-1.5 px-2.5 rounded-md"
                               onPress={handleCancelEditCategory}
                             >
-                              <Text style={styles.categoryActionBtnText}>
+                              <Text className="text-sm text-text-secondary">
                                 Cancel
                               </Text>
                             </Pressable>
                             <Pressable
-                              style={[
-                                styles.categoryActionBtn,
-                                styles.categorySaveBtn,
-                                !editCategoryValue.trim() &&
-                                  styles.categoryBtnDisabled,
-                              ]}
+                              className={`py-1.5 px-2.5 rounded-md bg-primary ${
+                                !editCategoryValue.trim() ? "opacity-40" : ""
+                              }`}
                               onPress={handleSaveCategory}
                               disabled={!editCategoryValue.trim()}
                             >
-                              <Text style={styles.categorySaveBtnText}>
+                              <Text className="text-sm font-semibold text-white">
                                 Save
                               </Text>
                             </Pressable>
@@ -726,51 +762,49 @@ export default function TodoScreen() {
                     }
 
                     return (
-                      <View key={category.id} style={styles.categoryRow}>
+                      <View
+                        key={category.id}
+                        className="flex-row items-center bg-surface-secondary rounded-lg py-2.5 px-3 mb-2 min-h-[44px]"
+                      >
                         <Text
-                          style={styles.categoryName}
+                          className="flex-1 text-[15px] font-medium text-text"
                           numberOfLines={1}
-                          ellipsizeMode="tail"
                         >
                           {category.name}
                         </Text>
-                        <View style={styles.categoryActions}>
+                        <View className="flex-row items-center gap-1">
                           <Pressable
-                            style={[
-                              styles.categoryArrowBtn,
-                              isFirst && styles.categoryBtnDisabled,
-                            ]}
+                            className={`w-8 h-8 items-center justify-center rounded-md bg-border ${
+                              isFirst ? "opacity-40" : ""
+                            }`}
                             onPress={() => handleMoveCategoryUp(category.id)}
                             disabled={isFirst}
                           >
                             <Text
-                              style={[
-                                styles.categoryArrowText,
-                                isFirst && styles.categoryArrowDisabled,
-                              ]}
+                              className={`text-base font-semibold ${
+                                isFirst ? "text-text-muted" : "text-text"
+                              }`}
                             >
                               ↑
                             </Text>
                           </Pressable>
                           <Pressable
-                            style={[
-                              styles.categoryArrowBtn,
-                              isLast && styles.categoryBtnDisabled,
-                            ]}
+                            className={`w-8 h-8 items-center justify-center rounded-md bg-border ${
+                              isLast ? "opacity-40" : ""
+                            }`}
                             onPress={() => handleMoveCategoryDown(category.id)}
                             disabled={isLast}
                           >
                             <Text
-                              style={[
-                                styles.categoryArrowText,
-                                isLast && styles.categoryArrowDisabled,
-                              ]}
+                              className={`text-base font-semibold ${
+                                isLast ? "text-text-muted" : "text-text"
+                              }`}
                             >
                               ↓
                             </Text>
                           </Pressable>
                           <Pressable
-                            style={styles.categoryIconBtn}
+                            className="w-8 h-8 items-center justify-center"
                             onPress={() =>
                               handleStartEditCategory(
                                 category.id,
@@ -778,13 +812,13 @@ export default function TodoScreen() {
                               )
                             }
                           >
-                            <Text style={styles.categoryIconText}>✏️</Text>
+                            <Text className="text-sm">✏️</Text>
                           </Pressable>
                           <Pressable
-                            style={styles.categoryIconBtn}
+                            className="w-8 h-8 items-center justify-center"
                             onPress={() => setDeletingCategoryId(category.id)}
                           >
-                            <Text style={styles.categoryIconText}>🗑️</Text>
+                            <Text className="text-sm">🗑️</Text>
                           </Pressable>
                         </View>
                       </View>
@@ -793,48 +827,48 @@ export default function TodoScreen() {
 
                   {/* Add Category */}
                   {isAddingCategory ? (
-                    <View style={styles.addCategoryContainer}>
+                    <View className="mt-1">
                       <TextInput
-                        style={styles.addCategoryInput}
+                        className="h-10 px-3 bg-surface rounded-lg text-[15px] border border-primary mb-2 text-text"
                         value={newCategoryName}
                         onChangeText={setNewCategoryName}
                         placeholder="Category name..."
+                        placeholderTextColor="rgb(var(--color-text-muted))"
                         autoFocus
                         onSubmitEditing={handleAddCategory}
                         returnKeyType="done"
                       />
-                      <View style={styles.addCategoryButtons}>
+                      <View className="flex-row justify-end gap-2">
                         <Pressable
-                          style={styles.categoryActionBtn}
+                          className="py-1.5 px-2.5 rounded-md"
                           onPress={() => {
                             setIsAddingCategory(false);
                             setNewCategoryName("");
                           }}
                         >
-                          <Text style={styles.categoryActionBtnText}>
+                          <Text className="text-sm text-text-secondary">
                             Cancel
                           </Text>
                         </Pressable>
                         <Pressable
-                          style={[
-                            styles.categoryActionBtn,
-                            styles.categorySaveBtn,
-                            !newCategoryName.trim() &&
-                              styles.categoryBtnDisabled,
-                          ]}
+                          className={`py-1.5 px-2.5 rounded-md bg-primary ${
+                            !newCategoryName.trim() ? "opacity-40" : ""
+                          }`}
                           onPress={handleAddCategory}
                           disabled={!newCategoryName.trim()}
                         >
-                          <Text style={styles.categorySaveBtnText}>Add</Text>
+                          <Text className="text-sm font-semibold text-white">
+                            Add
+                          </Text>
                         </Pressable>
                       </View>
                     </View>
                   ) : (
                     <Pressable
-                      style={styles.addCategoryBtn}
+                      className="py-2.5 items-center rounded-lg border border-dashed border-border"
                       onPress={() => setIsAddingCategory(true)}
                     >
-                      <Text style={styles.addCategoryBtnText}>
+                      <Text className="text-sm font-medium text-primary">
                         + Add Category
                       </Text>
                     </Pressable>
@@ -843,66 +877,72 @@ export default function TodoScreen() {
 
                 {/* Delete Option */}
                 <Pressable
-                  style={[styles.settingsOption, styles.deleteOption]}
+                  className="py-3.5 px-4 bg-danger/10 rounded-lg mb-3 border border-danger/30"
                   onPress={() => setShowDeleteConfirm(true)}
                 >
-                  <Text style={styles.deleteOptionText}>Delete List</Text>
+                  <Text className="text-base font-medium text-danger">
+                    Delete List
+                  </Text>
                 </Pressable>
 
                 {/* Close Button */}
                 <Pressable
-                  style={styles.closeButton}
+                  className="py-3 items-center mt-2"
                   onPress={handleCloseSettings}
                 >
-                  <Text style={styles.closeButtonText}>Close</Text>
+                  <Text className="text-base text-primary font-medium">
+                    Close
+                  </Text>
                 </Pressable>
               </>
             ) : (
               /* Delete Confirmation - High Visibility Warning */
-              <View style={styles.deleteConfirmContainer}>
-                <View style={styles.warningBanner}>
-                  <Text style={styles.warningIcon}>⚠️</Text>
-                  <Text style={styles.warningTitle}>DANGER ZONE</Text>
+              <View className="items-center">
+                <View className="flex-row items-center bg-danger py-3 px-6 rounded-lg mb-5 w-full justify-center">
+                  <Text className="text-2xl mr-2">⚠️</Text>
+                  <Text className="text-lg font-extrabold text-white tracking-wide">
+                    DANGER ZONE
+                  </Text>
                 </View>
 
-                <Text style={styles.deleteConfirmTitle}>
+                <Text className="text-xl font-bold text-text mb-4 text-center">
                   Delete "{settingsList?.name}"?
                 </Text>
 
-                <View style={styles.deleteWarningBox}>
-                  <Text style={styles.deleteWarningText}>
+                <View className="bg-danger/10 border-2 border-danger rounded-lg p-4 mb-6 w-full">
+                  <Text className="text-base font-extrabold text-danger text-center mb-3">
                     THIS ACTION CANNOT BE UNDONE
                   </Text>
-                  <Text style={styles.deleteWarningDetail}>
+                  <Text className="text-sm text-text-secondary mb-2">
                     This will permanently delete:
                   </Text>
-                  <Text style={styles.deleteWarningItem}>
+                  <Text className="text-sm text-text ml-2 mb-1">
                     • The list "{settingsList?.name}"
                   </Text>
-                  <Text style={styles.deleteWarningItem}>
+                  <Text className="text-sm text-text ml-2 mb-1">
                     • All {taskCountForSettingsList} task
                     {taskCountForSettingsList !== 1 ? "s" : ""} in this list
                   </Text>
-                  <Text style={styles.deleteWarningItem}>
+                  <Text className="text-sm text-text ml-2">
                     • All subtasks within those tasks
                   </Text>
                 </View>
 
-                <View style={styles.deleteConfirmButtons}>
+                <View className="w-full gap-3">
                   <Pressable
-                    style={styles.deleteConfirmCancel}
+                    className="py-3.5 px-5 bg-surface-secondary rounded-lg items-center"
                     onPress={() => setShowDeleteConfirm(false)}
                   >
-                    <Text style={styles.deleteConfirmCancelText}>
+                    <Text className="text-base font-semibold text-text">
                       Cancel - Keep List
                     </Text>
                   </Pressable>
 
                   <Pressable
-                    style={styles.deleteConfirmButton}
+                    className="py-3.5 px-5 bg-danger rounded-lg items-center"
                     onPress={handleDeleteList}
                   >
-                    <Text style={styles.deleteConfirmButtonText}>
+                    <Text className="text-base font-bold text-white">
                       Yes, Delete Everything
                     </Text>
                   </Pressable>
@@ -915,458 +955,3 @@ export default function TodoScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loadingText: {
-    fontSize: 16,
-    color: "#666",
-  },
-  newListContainer: {
-    padding: 16,
-    backgroundColor: "#f0f8ff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#cce5ff",
-  },
-  newListInput: {
-    height: 44,
-    paddingHorizontal: 16,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#007AFF",
-  },
-  newListHint: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 8,
-    textAlign: "center",
-  },
-  taskList: {
-    flex: 1,
-  },
-  taskListContent: {
-    padding: 16,
-    paddingTop: 0,
-  },
-  splitView: {
-    flex: 1,
-  },
-  splitViewContent: {
-    padding: 16,
-    gap: 16,
-    alignItems: "stretch",
-  },
-  listPane: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-    overflow: "hidden",
-  },
-  listTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#333",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-  },
-  emptyStateText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
-  },
-  emptyStateHint: {
-    fontSize: 14,
-    color: "#666",
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 24,
-    width: "90%",
-    maxWidth: 400,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  modalTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#666",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  modalListName: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#333",
-    marginBottom: 24,
-  },
-  settingsOption: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  settingsOptionText: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#333",
-  },
-  settingsToggleRow: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
-  },
-  settingsToggleTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#333",
-  },
-  settingsToggleHint: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 4,
-  },
-  deleteOption: {
-    backgroundColor: "#fff0f0",
-    borderWidth: 1,
-    borderColor: "#ffcccc",
-  },
-  deleteOptionText: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#cc0000",
-  },
-  closeButton: {
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  closeButtonText: {
-    fontSize: 16,
-    color: "#007AFF",
-    fontWeight: "500",
-  },
-  renameContainer: {
-    marginBottom: 12,
-  },
-  renameInput: {
-    height: 44,
-    paddingHorizontal: 12,
-    backgroundColor: "#f8f8f8",
-    borderRadius: 8,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#007AFF",
-    marginBottom: 12,
-  },
-  renameButtons: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-  },
-  cancelButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    color: "#666",
-  },
-  saveButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: "#007AFF",
-    borderRadius: 8,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    color: "#fff",
-    fontWeight: "600",
-  },
-  // Delete confirmation styles - HIGH VISIBILITY
-  deleteConfirmContainer: {
-    alignItems: "center",
-  },
-  warningBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#cc0000",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    marginBottom: 20,
-    width: "100%",
-    justifyContent: "center",
-  },
-  warningIcon: {
-    fontSize: 24,
-    marginRight: 8,
-  },
-  warningTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#fff",
-    letterSpacing: 1,
-  },
-  deleteConfirmTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#333",
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  deleteWarningBox: {
-    backgroundColor: "#fff0f0",
-    borderWidth: 2,
-    borderColor: "#cc0000",
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 24,
-    width: "100%",
-  },
-  deleteWarningText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#cc0000",
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  deleteWarningDetail: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 8,
-  },
-  deleteWarningItem: {
-    fontSize: 14,
-    color: "#333",
-    marginLeft: 8,
-    marginBottom: 4,
-  },
-  deleteConfirmButtons: {
-    width: "100%",
-    gap: 12,
-  },
-  deleteConfirmCancel: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  deleteConfirmCancelText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-  },
-  deleteConfirmButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    backgroundColor: "#cc0000",
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  deleteConfirmButtonText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  // Category management styles
-  categoriesSection: {
-    marginBottom: 16,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
-  },
-  categoriesSectionTitle: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#888",
-    letterSpacing: 0.5,
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  categoryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f8f8f8",
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-    minHeight: 44,
-  },
-  categoryName: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#333",
-  },
-  categoryActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  categoryArrowBtn: {
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 6,
-    backgroundColor: "#e8e8e8",
-  },
-  categoryArrowText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-  },
-  categoryArrowDisabled: {
-    color: "#ccc",
-  },
-  categoryIconBtn: {
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  categoryIconText: {
-    fontSize: 14,
-  },
-  categoryBtnDisabled: {
-    opacity: 0.4,
-  },
-  categoryEditInput: {
-    flex: 1,
-    height: 36,
-    paddingHorizontal: 10,
-    backgroundColor: "#fff",
-    borderRadius: 6,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: "#007AFF",
-  },
-  categoryEditButtons: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginLeft: 8,
-    gap: 6,
-  },
-  categoryActionBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-  },
-  categoryActionBtnText: {
-    fontSize: 14,
-    color: "#666",
-  },
-  categorySaveBtn: {
-    backgroundColor: "#007AFF",
-  },
-  categorySaveBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  categoryDeleteConfirm: {
-    flex: 1,
-  },
-  categoryDeleteText: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 8,
-  },
-  categoryDeleteButtons: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 8,
-  },
-  categoryDeleteCancel: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    backgroundColor: "#e8e8e8",
-  },
-  categoryDeleteCancelText: {
-    fontSize: 14,
-    color: "#333",
-  },
-  categoryDeleteConfirmBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    backgroundColor: "#cc0000",
-  },
-  categoryDeleteConfirmBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  addCategoryContainer: {
-    marginTop: 4,
-  },
-  addCategoryInput: {
-    height: 40,
-    paddingHorizontal: 12,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: "#007AFF",
-    marginBottom: 8,
-  },
-  addCategoryButtons: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 8,
-  },
-  addCategoryBtn: {
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderStyle: "dashed",
-  },
-  addCategoryBtnText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#007AFF",
-  },
-});

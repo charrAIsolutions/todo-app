@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, TextInput, StyleSheet, Keyboard, Pressable } from "react-native";
+import { View, TextInput, Keyboard, Pressable } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -49,14 +49,16 @@ export function AddTaskInput({
     transform: [{ scale: buttonScale.value }],
   }));
 
+  const isDisabled = !title.trim();
+
   return (
-    <View style={styles.container}>
+    <View className="flex-row items-center px-4 py-3 border-t border-border bg-surface">
       <TextInput
-        style={styles.input}
+        className="flex-1 h-11 px-4 bg-surface-secondary rounded-full text-base text-text mr-3"
         value={title}
         onChangeText={setTitle}
         placeholder={placeholder}
-        placeholderTextColor="#999"
+        placeholderTextColor="rgb(var(--color-text-muted))"
         onSubmitEditing={handleSubmit}
         returnKeyType="done"
       />
@@ -64,51 +66,18 @@ export function AddTaskInput({
         onPress={handleSubmit}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        disabled={!title.trim()}
-        style={[
-          styles.addButton,
-          !title.trim() && styles.addButtonDisabled,
-          animatedButtonStyle,
-        ]}
+        disabled={isDisabled}
+        className={`w-11 h-11 rounded-full items-center justify-center ${
+          isDisabled ? "bg-border" : "bg-primary"
+        }`}
+        style={animatedButtonStyle}
       >
         <FontAwesome
           name="plus"
           size={18}
-          color={title.trim() ? "#fff" : "#ccc"}
+          color={isDisabled ? "rgb(var(--color-text-muted))" : "#fff"}
         />
       </AnimatedPressable>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-    backgroundColor: "#fff",
-  },
-  input: {
-    flex: 1,
-    height: 44,
-    paddingHorizontal: 16,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 22,
-    fontSize: 16,
-    marginRight: 12,
-  },
-  addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#007AFF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addButtonDisabled: {
-    backgroundColor: "#e0e0e0",
-  },
-});

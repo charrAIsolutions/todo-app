@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { TodoList, Task, LegacyTodo } from "../types/todo";
+import { ThemePreference } from "../types/theme";
 import { generateId, nowISO } from "./utils";
 
 // =============================================================================
@@ -11,6 +12,7 @@ const STORAGE_KEYS = {
   LISTS: "app:lists",
   TASKS: "app:tasks",
   ACTIVE_LIST: "app:activeListId",
+  THEME_PREFERENCE: "app:themePreference",
   // Legacy key (for migration)
   LEGACY_TODOS: "todos",
 } as const;
@@ -57,6 +59,21 @@ export const storage = {
     } else {
       await AsyncStorage.setItem(STORAGE_KEYS.ACTIVE_LIST, id);
     }
+  },
+
+  // ---------------------------------------------------------------------------
+  // Theme Preference
+  // ---------------------------------------------------------------------------
+  async getThemePreference(): Promise<ThemePreference | null> {
+    const value = await AsyncStorage.getItem(STORAGE_KEYS.THEME_PREFERENCE);
+    if (value === "light" || value === "dark" || value === "system") {
+      return value;
+    }
+    return null;
+  },
+
+  async setThemePreference(preference: ThemePreference): Promise<void> {
+    await AsyncStorage.setItem(STORAGE_KEYS.THEME_PREFERENCE, preference);
   },
 
   // ---------------------------------------------------------------------------

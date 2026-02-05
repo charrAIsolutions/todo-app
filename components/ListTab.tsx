@@ -1,4 +1,4 @@
-import { Pressable, Text, StyleSheet, Platform, View } from "react-native";
+import { Pressable, Text, Platform, View } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useState } from "react";
 
@@ -29,19 +29,16 @@ export function ListTab({
       onHoverIn={() => setIsHovered(true)}
       onHoverOut={() => setIsHovered(false)}
       testID={isActive ? "list-tab-active" : "list-tab"}
-      style={({ pressed }) => [
-        styles.tab,
-        isActive && styles.tabActive,
-        pressed && styles.tabPressed,
-      ]}
+      className={`px-4 py-2.5 mr-1 rounded-lg ${
+        isActive ? "bg-primary" : "bg-transparent active:opacity-70"
+      }`}
     >
-      <View style={styles.tabContent}>
+      <View className="flex-row items-center gap-2">
         <Text
-          style={[
-            styles.tabText,
-            isActive && styles.tabTextActive,
-            isWeb && styles.noSelect,
-          ]}
+          className={`text-[15px] font-medium ${
+            isActive ? "text-white font-semibold" : "text-text-secondary"
+          }`}
+          style={isWeb ? { userSelect: "none" } : undefined}
         >
           {name}
         </Text>
@@ -52,17 +49,15 @@ export function ListTab({
               event?.stopPropagation?.();
               onOpenSettings();
             }}
-            style={[
-              styles.settingsButton,
-              Platform.OS !== "web" || isHovered
-                ? styles.settingsButtonVisible
-                : styles.settingsButtonHidden,
-            ]}
+            className="p-1 rounded-lg"
+            style={{
+              opacity: Platform.OS !== "web" || isHovered ? 1 : 0,
+            }}
           >
             <FontAwesome
               name="ellipsis-v"
               size={14}
-              color={isActive ? "#fff" : "#666"}
+              color={isActive ? "#fff" : "rgb(var(--color-text-secondary))"}
             />
           </Pressable>
         )}
@@ -70,46 +65,3 @@ export function ListTab({
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginRight: 4,
-    borderRadius: 8,
-    backgroundColor: "transparent",
-  },
-  tabContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  tabActive: {
-    backgroundColor: "#007AFF",
-  },
-  tabPressed: {
-    opacity: 0.7,
-  },
-  tabText: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#666",
-  },
-  tabTextActive: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  settingsButton: {
-    padding: 4,
-    borderRadius: 8,
-  },
-  settingsButtonHidden: {
-    opacity: 0,
-  },
-  settingsButtonVisible: {
-    opacity: 1,
-  },
-  noSelect: {
-    userSelect: "none",
-  } as const,
-});
