@@ -28,6 +28,7 @@ You are a senior React Native developer and mentor. Your student (Charles) is a 
 
 - **Expo SDK**: 54 (managed workflow)
 - **Styling**: NativeWind v4 with CSS variables for theming
+- **Animations**: react-native-reanimated (spring-based micro-interactions)
 - **State**: React Context + useReducer (in `store/AppContext.tsx`)
 - **Storage**: AsyncStorage via `@react-native-async-storage/async-storage`
 - **Navigation**: Expo Router (file-based routing)
@@ -45,6 +46,8 @@ components/             # Reusable UI components
 hooks/                  # Custom React hooks
   useTheme.ts           # Theme hook for preference & effective scheme
 lib/                    # Utilities, helpers, constants
+  animations.ts         # Shared animation constants (SPRING, DURATION, COLORS)
+  colors.ts             # Semantic color values for React Navigation compatibility
   storage.ts            # AsyncStorage wrappers (includes theme preference)
   utils.ts              # General utilities
 store/                  # State management
@@ -346,7 +349,34 @@ interface Task {
 - Cross-list drag-and-drop (drag stays within single list)
 - Multi-list view on mobile
 
-### Phase 8: Dark Mode with NativeWind v4 ✓
+### Phase 8: UI Animations & Dark Mode ✓
+
+Built by two parallel agents (Module 5 practice: parallel delegation).
+
+**8a: UI Animations (PR #4)**
+
+- `lib/animations.ts` - Shared constants (SPRING configs, DURATION, COLORS)
+- `components/TaskItem.tsx` - Checkbox scale pulse + interpolateColor transition
+- `components/CategorySection.tsx` - FadeInDown/FadeOutUp entry/exit animations
+- `components/AddTaskInput.tsx` - AnimatedPressable button press scale feedback
+- `app/_layout.tsx` - slide_from_bottom modal transition
+- `open-issues.md` - Code review findings from animation agent
+
+**Animation patterns:**
+
+- Entry animations skip initial render (hasRendered ref pattern)
+- LinearTransition only used in static sections (conflicts with drag-drop measurements)
+- AnimatedPressable created at module scope to avoid remount on re-render
+
+**Working:**
+
+- ✅ Checkbox scale pulse and color transition on toggle
+- ✅ Task entry/exit animations (FadeInDown/FadeOutUp)
+- ✅ Add button press scale feedback
+- ✅ Modal slide-from-bottom transition
+- ✅ Animations disabled on initial render and list switch
+
+**8b: Dark Mode with NativeWind v4 (PR #5)**
 
 - Full NativeWind v4 migration from StyleSheet.create()
 - `tailwind.config.js` - Semantic color tokens with CSS variable support
@@ -354,7 +384,9 @@ interface Task {
 - `store/ThemeContext.tsx` - Theme state management (light/dark/system)
 - `hooks/useTheme.ts` - Hook for accessing theme preference and effective scheme
 - `types/theme.ts` - ThemePreference and ColorScheme types
+- `lib/colors.ts` - Semantic color values for React Navigation compatibility
 - `lib/storage.ts` - Theme preference persistence
+- `babel.config.js`, `metro.config.js` - NativeWind build configuration
 
 **Key files migrated:**
 
@@ -373,6 +405,13 @@ interface Task {
 - ✅ NativeWind colorScheme.set() for programmatic control
 - ✅ React Navigation theme synced with app theme
 
+**Known issues (see `open-issues.md`):**
+
+- Bug: Dragging subtask to new category sends it to uncategorized (High)
+- Missing: useReducedMotion accessibility hook (Warning)
+- Suggestion: SPRING type too loose (use `as const satisfies`)
+- Suggestion: Missing accessibility labels on checkbox/row
+
 ## Current State
 
 **Done (Phases 1-8):**
@@ -383,6 +422,7 @@ interface Task {
 - Task detail modal with all CRUD operations
 - "Show on open" for web launch preferences
 - Local storage persistence
+- UI animations (spring-based micro-interactions via Reanimated)
 - Dark mode with NativeWind v4
 
 **In Progress:**
