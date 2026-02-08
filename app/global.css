@@ -10,6 +10,7 @@
   --color-text-secondary: 102 102 102;
   --color-text-muted: 153 153 153;
   --color-border: 224 224 224;
+  --color-skeleton: 228 228 232;
   --color-primary: 0 122 255;
   --color-success: 52 199 89;
   --color-warning: 255 149 0;
@@ -24,6 +25,7 @@
   --color-text-secondary: 142 142 147;
   --color-text-muted: 99 99 102;
   --color-border: 56 56 58;
+  --color-skeleton: 50 50 54;
   --color-primary: 10 132 255;
   --color-success: 48 209 88;
   --color-warning: 255 159 10;

@@ -7,12 +7,12 @@ import {
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import "./global.css";
 
-import { AppProvider } from "@/store/AppContext";
+import { AppProvider, useAppContext } from "@/store/AppContext";
 import { ThemeProvider, useThemeContext } from "@/store/ThemeContext";
 
 export {
@@ -39,29 +39,42 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
   if (!loaded) {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return <RootLayoutNav fontsLoaded={loaded} />;
 }
 
-function RootLayoutNav() {
+function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
         <AppProvider>
+          <SplashScreenManager fontsLoaded={fontsLoaded} />
           <ThemedNavigator />
         </AppProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );
+}
+
+/**
+ * Hides the Expo splash screen once both fonts AND data hydration are complete.
+ * Renders nothing — just a side-effect component.
+ */
+function SplashScreenManager({ fontsLoaded }: { fontsLoaded: boolean }) {
+  const { state } = useAppContext();
+  const hasHidden = useRef(false);
+
+  useEffect(() => {
+    if (fontsLoaded && !state.isLoading && !hasHidden.current) {
+      hasHidden.current = true;
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, state.isLoading]);
+
+  return null;
 }
 
 function ThemedNavigator() {
