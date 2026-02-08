@@ -5,6 +5,7 @@ import Animated, {
   FadeOutUp,
   LinearTransition,
 } from "react-native-reanimated";
+import { Text } from "react-native";
 import { Category, Task } from "@/types/todo";
 import { CategoryHeader, UncategorizedHeader } from "./CategoryHeader";
 import { TaskItem } from "./TaskItem";
@@ -132,7 +133,9 @@ function DraggableCategorySection({
           />
         </View>
       ) : (
-        <View className="h-8 ml-4 border border-dashed border-border rounded-lg bg-surface" />
+        <View className="h-10 ml-4 border border-dashed border-border rounded-lg bg-surface items-center justify-center">
+          <Text className="text-xs text-text-muted">No tasks yet</Text>
+        </View>
       )}
     </View>
   );
@@ -208,7 +211,9 @@ function StaticCategorySection({
           })}
         </View>
       ) : (
-        <View className="h-8 ml-4 border border-dashed border-border rounded-lg bg-surface" />
+        <View className="h-10 ml-4 border border-dashed border-border rounded-lg bg-surface items-center justify-center">
+          <Text className="text-xs text-text-muted">No tasks yet</Text>
+        </View>
       )}
     </View>
   );

@@ -16,6 +16,7 @@ import { useAppData } from "@/hooks/useAppData";
 import { ListTabBar } from "@/components/ListTabBar";
 import { AddTaskInput } from "@/components/AddTaskInput";
 import { CategorySection } from "@/components/CategorySection";
+import { EmptyState } from "@/components/EmptyState";
 import { DragProvider } from "@/components/drag";
 import type { DragEndEvent } from "@/types";
 import type { Task } from "@/types/todo";
@@ -376,7 +377,13 @@ export default function TodoScreen() {
 
   // Check if there are any tasks at all
   const hasAnyTasks = tasksByCategory.size > 0;
+  const hasCategories = categories.length > 0;
   const uncategorizedTasks = tasksByCategory.get(null) ?? [];
+
+  // "All caught up" detection — all top-level tasks completed
+  const allTopLevelTasks = Array.from(tasksByCategory.values()).flat();
+  const isAllCaughtUp =
+    allTopLevelTasks.length > 0 && allTopLevelTasks.every((t) => t.completed);
 
   const renderListPane = (listId: string) => {
     const list = lists.find((item) => item.id === listId);
@@ -390,7 +397,14 @@ export default function TodoScreen() {
     const listTasksByCategory = listData?.tasksByCategory ?? new Map();
     const listSubtasksByParent = listData?.subtasksByParent ?? new Map();
     const listHasTasks = listTasksByCategory.size > 0;
+    const listHasCategories = listCategories.length > 0;
     const listUncategorizedTasks = listTasksByCategory.get(null) ?? [];
+
+    // "All caught up" for this pane
+    const paneTopLevelTasks = Array.from(listTasksByCategory.values()).flat();
+    const paneAllCaughtUp =
+      paneTopLevelTasks.length > 0 &&
+      paneTopLevelTasks.every((t) => t.completed);
 
     return (
       <View
@@ -406,6 +420,26 @@ export default function TodoScreen() {
             className="flex-1"
             contentContainerStyle={{ padding: 16, paddingTop: 0 }}
           >
+            {/* "All caught up" banner */}
+            {paneAllCaughtUp && (
+              <EmptyState
+                icon="🎉"
+                title="All caught up!"
+                message="Great work — add more or take a break"
+                compact
+              />
+            )}
+
+            {/* Compact "No tasks yet" when categories exist but no tasks */}
+            {!listHasTasks && listHasCategories && !paneAllCaughtUp && (
+              <EmptyState
+                icon="📝"
+                title="No tasks yet"
+                message="Add your first task below"
+                compact
+              />
+            )}
+
             {/* Render each category section (even when empty for drag-drop targets) */}
             {listCategories.map((category) => {
               const categoryTasks = listTasksByCategory.get(category.id) ?? [];
@@ -436,16 +470,13 @@ export default function TodoScreen() {
               />
             )}
 
-            {/* Empty state only when no categories and no tasks */}
-            {listCategories.length === 0 && !listHasTasks && (
-              <View className="flex-1 items-center justify-center py-16">
-                <Text className="text-lg font-semibold text-text mb-2">
-                  No tasks yet
-                </Text>
-                <Text className="text-sm text-text-secondary">
-                  Add your first task below
-                </Text>
-              </View>
+            {/* Full centered empty state when no categories and no tasks */}
+            {!listHasCategories && !listHasTasks && (
+              <EmptyState
+                icon="📝"
+                title="No tasks yet"
+                message="Add your first task below"
+              />
             )}
           </ScrollView>
         </DragProvider>
@@ -504,14 +535,11 @@ export default function TodoScreen() {
           {listIdsToRender.length > 0 ? (
             listIdsToRender.map((listId) => renderListPane(listId))
           ) : (
-            <View className="flex-1 items-center justify-center py-16">
-              <Text className="text-lg font-semibold text-text mb-2">
-                No list selected
-              </Text>
-              <Text className="text-sm text-text-secondary">
-                Create a list using the + button above
-              </Text>
-            </View>
+            <EmptyState
+              icon="👆"
+              title="No list selected"
+              message="Click a tab to add it to this view"
+            />
           )}
         </ScrollView>
       ) : (
@@ -524,6 +552,26 @@ export default function TodoScreen() {
             >
               {activeList ? (
                 <>
+                  {/* "All caught up" banner */}
+                  {isAllCaughtUp && (
+                    <EmptyState
+                      icon="🎉"
+                      title="All caught up!"
+                      message="Great work — add more or take a break"
+                      compact
+                    />
+                  )}
+
+                  {/* Compact "No tasks yet" when categories exist but no tasks */}
+                  {!hasAnyTasks && hasCategories && !isAllCaughtUp && (
+                    <EmptyState
+                      icon="📝"
+                      title="No tasks yet"
+                      message="Add your first task below"
+                      compact
+                    />
+                  )}
+
                   {/* Render each category section (even when empty for drag-drop targets) */}
                   {categories.map((category) => {
                     const categoryTasks =
@@ -555,27 +603,21 @@ export default function TodoScreen() {
                     />
                   )}
 
-                  {/* Empty state only when no categories and no tasks */}
-                  {categories.length === 0 && !hasAnyTasks && (
-                    <View className="flex-1 items-center justify-center py-16">
-                      <Text className="text-lg font-semibold text-text mb-2">
-                        No tasks yet
-                      </Text>
-                      <Text className="text-sm text-text-secondary">
-                        Add your first task below
-                      </Text>
-                    </View>
+                  {/* Full centered empty state when no categories and no tasks */}
+                  {!hasCategories && !hasAnyTasks && (
+                    <EmptyState
+                      icon="📝"
+                      title="No tasks yet"
+                      message="Add your first task below"
+                    />
                   )}
                 </>
               ) : (
-                <View className="flex-1 items-center justify-center py-16">
-                  <Text className="text-lg font-semibold text-text mb-2">
-                    No list selected
-                  </Text>
-                  <Text className="text-sm text-text-secondary">
-                    Create a list using the + button above
-                  </Text>
-                </View>
+                <EmptyState
+                  icon="👆"
+                  title="No list selected"
+                  message="Create a list using the + button above"
+                />
               )}
             </ScrollView>
           </DragProvider>

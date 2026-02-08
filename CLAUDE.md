@@ -1,6 +1,6 @@
 # Last updated: February 2026
 
-# Version: 0.0.8.0
+# Version: 0.0.9.0
 
 <!-- It is 2026, not 2025 -->
 
@@ -412,9 +412,41 @@ Built by two parallel agents (Module 5 practice: parallel delegation).
 - Suggestion: SPRING type too loose (use `as const satisfies`)
 - Suggestion: Missing accessibility labels on checkbox/row
 
+### Phase 9: Empty State Messaging ✓
+
+- `components/EmptyState.tsx` - Reusable component with full (centered hero) and compact (inline banner) modes
+- `components/CategorySection.tsx` - Added hint text inside empty category dashed boxes
+- `app/(tabs)/index.tsx` - Fixed empty state detection logic, replaced 4 inline empty states, added "all caught up" banner
+
+**EmptyState component:**
+
+- Full mode: Emoji in rounded circle, title, subtitle, centered layout
+- Compact mode: Emoji inline with title, smaller padding, for banners above content
+- FadeInDown entrance animation with hasRendered ref pattern (skip on initial mount)
+
+**Scenarios covered:**
+
+| Context                    | Mode    | Icon | Title              |
+| -------------------------- | ------- | ---- | ------------------ |
+| Empty list, no categories  | full    | 📝   | "No tasks yet"     |
+| Empty list, has categories | compact | 📝   | "No tasks yet"     |
+| All tasks completed        | compact | 🎉   | "All caught up!"   |
+| No list selected (mobile)  | full    | 👆   | "No list selected" |
+| No list selected (web)     | full    | 👆   | "No list selected" |
+
+**Working:**
+
+- ✅ Context-aware empty states for all list/category/task combinations
+- ✅ "All caught up" celebration banner when all top-level tasks complete
+- ✅ Empty category dashed boxes show "No tasks yet" hint text
+- ✅ Dashed box height increased from h-8 to h-10 for better target area
+- ✅ Web split-view panes each track their own empty/caught-up state
+- ✅ Dark mode compatible via semantic color tokens
+- ✅ Entrance animation with initial-render skip pattern
+
 ## Current State
 
-**Done (Phases 1-8):**
+**Done (Phases 1-9):**
 
 - Full data model with lists, categories, tasks, subtasks
 - Multi-list tabs with web split-view
@@ -424,6 +456,7 @@ Built by two parallel agents (Module 5 practice: parallel delegation).
 - Local storage persistence
 - UI animations (spring-based micro-interactions via Reanimated)
 - Dark mode with NativeWind v4
+- Context-aware empty state messaging with celebration states
 
 **In Progress:**
 
@@ -431,12 +464,12 @@ Built by two parallel agents (Module 5 practice: parallel delegation).
 
 **Next (suggested):**
 
-- Phase 9: iOS App Store deployment (EAS Build, app icons, splash screens)
-- Phase 10: Cloud sync (optional - requires auth)
+- Phase 10: iOS App Store deployment (EAS Build, app icons, splash screens)
+- Phase 11: Cloud sync (optional - requires auth)
 
 ## Phases
 
-(Phases 1-8 complete)
+(Phases 1-9 complete)
 
 ## Versioning
 
