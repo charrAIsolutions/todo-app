@@ -42,3 +42,15 @@ export const COLORS = {
   textActive: "#333333",
   textCompleted: "#999999",
 } as const;
+
+/**
+ * Skeleton loading pulse animation config
+ * - durationDown/Up: ms for each half of the opacity cycle
+ * - opacityLow/High: opacity range for the pulse effect
+ */
+export const SKELETON = {
+  durationDown: 800,
+  durationUp: 800,
+  opacityLow: 0.4,
+  opacityHigh: 1.0,
+} as const;

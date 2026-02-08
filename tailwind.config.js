@@ -15,6 +15,7 @@ module.exports = {
         "text-secondary": "rgb(var(--color-text-secondary) / <alpha-value>)",
         "text-muted": "rgb(var(--color-text-muted) / <alpha-value>)",
         border: "rgb(var(--color-border) / <alpha-value>)",
+        skeleton: "rgb(var(--color-skeleton) / <alpha-value>)",
         primary: "rgb(var(--color-primary) / <alpha-value>)",
         success: "rgb(var(--color-success) / <alpha-value>)",
         warning: "rgb(var(--color-warning) / <alpha-value>)",
