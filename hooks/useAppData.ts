@@ -269,6 +269,21 @@ export function useAppData() {
     [dispatch],
   );
 
+  const moveTaskToList = useCallback(
+    (
+      taskId: string,
+      targetListId: string,
+      targetCategoryId: string | null,
+      newSortOrder: number,
+    ) => {
+      dispatch({
+        type: "MOVE_TASK_TO_LIST",
+        payload: { taskId, targetListId, targetCategoryId, newSortOrder },
+      });
+    },
+    [dispatch],
+  );
+
   const nestTask = useCallback(
     (taskId: string, parentTaskId: string | null) => {
       dispatch({ type: "NEST_TASK", payload: { taskId, parentTaskId } });
@@ -327,6 +342,7 @@ export function useAppData() {
     deleteTask,
     toggleTask,
     moveTask,
+    moveTaskToList,
     nestTask,
     reorderTasks,
   };

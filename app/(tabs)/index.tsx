@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -17,10 +17,138 @@ import { ListTabBar } from "@/components/ListTabBar";
 import { AddTaskInput } from "@/components/AddTaskInput";
 import { CategorySection } from "@/components/CategorySection";
 import { EmptyState } from "@/components/EmptyState";
-import { DragProvider } from "@/components/drag";
+import { DragProvider, useDragContext } from "@/components/drag";
 import type { DragEndEvent } from "@/types";
-import type { Task } from "@/types/todo";
+import type { Task, TodoList } from "@/types/todo";
 import { SkeletonScreen } from "@/components/skeleton";
+
+// ---------------------------------------------------------------------------
+// ListPane Component (web split-view pane with pane layout registration)
+// ---------------------------------------------------------------------------
+
+interface ListPaneProps {
+  listId: string;
+  list: TodoList;
+  listData:
+    | {
+        tasksByCategory: Map<string | null, Task[]>;
+        subtasksByParent: Map<string, Task[]>;
+      }
+    | undefined;
+  onToggleTask: (taskId: string) => void;
+  onPressTask: (taskId: string) => void;
+  onAddTask: (title: string) => void;
+  paneWidth: number;
+}
+
+function ListPane({
+  listId,
+  list,
+  listData,
+  onToggleTask,
+  onPressTask,
+  onAddTask,
+  paneWidth,
+}: ListPaneProps) {
+  const { registerPaneLayout } = useDragContext();
+  const paneRef = useRef<View>(null);
+
+  const handlePaneLayout = useCallback(() => {
+    paneRef.current?.measureInWindow((x, _y, w, _h) => {
+      registerPaneLayout({ listId, x, width: w });
+    });
+  }, [listId, registerPaneLayout]);
+
+  const listCategories = [...list.categories].sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
+  const listTasksByCategory = listData?.tasksByCategory ?? new Map();
+  const listSubtasksByParent = listData?.subtasksByParent ?? new Map();
+  const listHasTasks = listTasksByCategory.size > 0;
+  const listHasCategories = listCategories.length > 0;
+  const listUncategorizedTasks = listTasksByCategory.get(null) ?? [];
+
+  // "All caught up" for this pane
+  const paneTopLevelTasks = Array.from(listTasksByCategory.values()).flat();
+  const paneAllCaughtUp =
+    paneTopLevelTasks.length > 0 && paneTopLevelTasks.every((t) => t.completed);
+
+  return (
+    <View
+      ref={paneRef}
+      onLayout={handlePaneLayout}
+      className="bg-surface rounded-xl border border-border"
+      style={{ width: paneWidth, position: "relative" }}
+    >
+      <Text className="text-lg font-bold text-text px-4 pt-4 pb-2">
+        {list.name}
+      </Text>
+      <ScrollView
+        className="flex-1 overflow-hidden"
+        contentContainerStyle={{ padding: 16, paddingTop: 0 }}
+      >
+        {/* "All caught up" banner */}
+        {paneAllCaughtUp && (
+          <EmptyState
+            icon="🎉"
+            title="All caught up!"
+            message="Great work — add more or take a break"
+            compact
+          />
+        )}
+
+        {/* Compact "No tasks yet" when categories exist but no tasks */}
+        {!listHasTasks && listHasCategories && !paneAllCaughtUp && (
+          <EmptyState
+            icon="📝"
+            title="No tasks yet"
+            message="Add your first task below"
+            compact
+          />
+        )}
+
+        {listCategories.map((category) => {
+          const categoryTasks = listTasksByCategory.get(category.id) ?? [];
+          return (
+            <CategorySection
+              key={category.id}
+              category={category}
+              listId={listId}
+              tasks={categoryTasks}
+              subtasksByParent={listSubtasksByParent}
+              onToggleTask={onToggleTask}
+              onPressTask={onPressTask}
+              dragEnabled
+            />
+          );
+        })}
+
+        {listUncategorizedTasks.length > 0 && (
+          <CategorySection
+            category={null}
+            listId={listId}
+            tasks={listUncategorizedTasks}
+            subtasksByParent={listSubtasksByParent}
+            onToggleTask={onToggleTask}
+            onPressTask={onPressTask}
+            dragEnabled
+          />
+        )}
+
+        {/* Full centered empty state when no categories and no tasks */}
+        {!listHasCategories && !listHasTasks && (
+          <EmptyState
+            icon="📝"
+            title="No tasks yet"
+            message="Add your first task below"
+          />
+        )}
+      </ScrollView>
+
+      <AddTaskInput onAddTask={onAddTask} />
+    </View>
+  );
+}
 
 /**
  * Main todo list screen.
@@ -51,6 +179,7 @@ export default function TodoScreen() {
     updateTask,
     toggleTask,
     moveTask,
+    moveTaskToList,
     nestTask,
   } = useAppData();
 
@@ -232,12 +361,70 @@ export default function TodoScreen() {
         }
 
         case "unnest": {
+          // First unnest (set parentTaskId to null)
           nestTask(task.id, null);
+          // Then place in the category the user dropped into
+          const siblingTasks = tasks.filter(
+            (t) =>
+              t.listId === task.listId &&
+              t.categoryId === dropZone.categoryId &&
+              t.parentTaskId === null &&
+              t.id !== task.id,
+          );
+          const newUnnestSortOrder =
+            siblingTasks.length > 0
+              ? Math.max(...siblingTasks.map((t) => t.sortOrder)) + 1
+              : 0;
+          moveTask(task.id, dropZone.categoryId, newUnnestSortOrder);
+          break;
+        }
+
+        case "move-list": {
+          if (!dropZone.listId) break;
+          const targetTasks = tasks.filter(
+            (t) =>
+              t.listId === dropZone.listId &&
+              t.categoryId === dropZone.categoryId &&
+              t.parentTaskId === null &&
+              t.id !== task.id,
+          );
+          targetTasks.sort((a, b) => a.sortOrder - b.sortOrder);
+
+          let newMoveListSortOrder: number;
+          if (dropZone.beforeTaskId) {
+            const beforeIndex = targetTasks.findIndex(
+              (t) => t.id === dropZone.beforeTaskId,
+            );
+            if (beforeIndex === 0) {
+              newMoveListSortOrder = targetTasks[0].sortOrder - 1;
+            } else if (beforeIndex > 0) {
+              const prev = targetTasks[beforeIndex - 1];
+              const next = targetTasks[beforeIndex];
+              newMoveListSortOrder = (prev.sortOrder + next.sortOrder) / 2;
+            } else {
+              newMoveListSortOrder =
+                targetTasks.length > 0
+                  ? targetTasks[targetTasks.length - 1].sortOrder + 1
+                  : 0;
+            }
+          } else {
+            newMoveListSortOrder =
+              targetTasks.length > 0
+                ? targetTasks[targetTasks.length - 1].sortOrder + 1
+                : 0;
+          }
+
+          moveTaskToList(
+            task.id,
+            dropZone.listId,
+            dropZone.categoryId,
+            newMoveListSortOrder,
+          );
           break;
         }
       }
     },
-    [tasks, moveTask, nestTask, updateTask],
+    [tasks, moveTask, moveTaskToList, nestTask, updateTask],
   );
 
   // ---------------------------------------------------------------------------
@@ -382,106 +569,7 @@ export default function TodoScreen() {
   const isAllCaughtUp =
     allTopLevelTasks.length > 0 && allTopLevelTasks.every((t) => t.completed);
 
-  const renderListPane = (listId: string) => {
-    const list = lists.find((item) => item.id === listId);
-    if (!list) return null;
-    const listCategories = [...list.categories].sort(
-      (a, b) => a.sortOrder - b.sortOrder,
-    );
-    // Each pane should be 1/4 of screen width OR 360px, whichever is bigger
-    const paneWidth = Math.max(windowWidth / 4, 360);
-    const listData = listTaskData.get(listId);
-    const listTasksByCategory = listData?.tasksByCategory ?? new Map();
-    const listSubtasksByParent = listData?.subtasksByParent ?? new Map();
-    const listHasTasks = listTasksByCategory.size > 0;
-    const listHasCategories = listCategories.length > 0;
-    const listUncategorizedTasks = listTasksByCategory.get(null) ?? [];
-
-    // "All caught up" for this pane
-    const paneTopLevelTasks = Array.from(listTasksByCategory.values()).flat();
-    const paneAllCaughtUp =
-      paneTopLevelTasks.length > 0 &&
-      paneTopLevelTasks.every((t) => t.completed);
-
-    return (
-      <View
-        key={listId}
-        className="bg-surface rounded-xl border border-border overflow-hidden"
-        style={{ width: paneWidth }}
-      >
-        <Text className="text-lg font-bold text-text px-4 pt-4 pb-2">
-          {list.name}
-        </Text>
-        <DragProvider onDragEnd={handleDragEnd}>
-          <ScrollView
-            className="flex-1"
-            contentContainerStyle={{ padding: 16, paddingTop: 0 }}
-          >
-            {/* "All caught up" banner */}
-            {paneAllCaughtUp && (
-              <EmptyState
-                icon="🎉"
-                title="All caught up!"
-                message="Great work — add more or take a break"
-                compact
-              />
-            )}
-
-            {/* Compact "No tasks yet" when categories exist but no tasks */}
-            {!listHasTasks && listHasCategories && !paneAllCaughtUp && (
-              <EmptyState
-                icon="📝"
-                title="No tasks yet"
-                message="Add your first task below"
-                compact
-              />
-            )}
-
-            {/* Render each category section (even when empty for drag-drop targets) */}
-            {listCategories.map((category) => {
-              const categoryTasks = listTasksByCategory.get(category.id) ?? [];
-              return (
-                <CategorySection
-                  key={category.id}
-                  category={category}
-                  listId={listId}
-                  tasks={categoryTasks}
-                  subtasksByParent={listSubtasksByParent}
-                  onToggleTask={toggleTask}
-                  onPressTask={handlePressTask}
-                  dragEnabled
-                />
-              );
-            })}
-
-            {/* Uncategorized section at bottom */}
-            {listUncategorizedTasks.length > 0 && (
-              <CategorySection
-                category={null}
-                listId={listId}
-                tasks={listUncategorizedTasks}
-                subtasksByParent={listSubtasksByParent}
-                onToggleTask={toggleTask}
-                onPressTask={handlePressTask}
-                dragEnabled
-              />
-            )}
-
-            {/* Full centered empty state when no categories and no tasks */}
-            {!listHasCategories && !listHasTasks && (
-              <EmptyState
-                icon="📝"
-                title="No tasks yet"
-                message="Add your first task below"
-              />
-            )}
-          </ScrollView>
-        </DragProvider>
-
-        <AddTaskInput onAddTask={(title) => handleAddTask(title, listId)} />
-      </View>
-    );
-  };
+  const paneWidth = Math.max(windowWidth / 4, 360);
 
   return (
     <KeyboardAvoidingView
@@ -519,26 +607,44 @@ export default function TodoScreen() {
       )}
 
       {isWeb ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator
-          contentContainerStyle={{
-            padding: 16,
-            gap: 16,
-            alignItems: "stretch",
-          }}
-          className="flex-1"
-        >
-          {listIdsToRender.length > 0 ? (
-            listIdsToRender.map((listId) => renderListPane(listId))
-          ) : (
-            <EmptyState
-              icon="👆"
-              title="No list selected"
-              message="Click a tab to add it to this view"
-            />
-          )}
-        </ScrollView>
+        <DragProvider onDragEnd={handleDragEnd}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator
+            contentContainerStyle={{
+              padding: 16,
+              gap: 16,
+              alignItems: "stretch",
+            }}
+            className="flex-1"
+          >
+            {listIdsToRender.length > 0 ? (
+              listIdsToRender.map((listId) => {
+                const list = lists.find((item) => item.id === listId);
+                if (!list) return null;
+                const listData = listTaskData.get(listId);
+                return (
+                  <ListPane
+                    key={listId}
+                    listId={listId}
+                    list={list}
+                    listData={listData}
+                    onToggleTask={toggleTask}
+                    onPressTask={handlePressTask}
+                    onAddTask={(title) => handleAddTask(title, listId)}
+                    paneWidth={paneWidth}
+                  />
+                );
+              })
+            ) : (
+              <EmptyState
+                icon="👆"
+                title="No list selected"
+                message="Click a tab to add it to this view"
+              />
+            )}
+          </ScrollView>
+        </DragProvider>
       ) : (
         <>
           {/* Task List with Drag-and-Drop */}

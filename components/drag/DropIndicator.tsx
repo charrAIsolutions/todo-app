@@ -44,6 +44,8 @@ export function DropIndicator({ visible, type }: DropIndicatorProps) {
         return colors.danger;
       case "move-category":
         return colors.warning;
+      case "move-list":
+        return colors.primary;
       default:
         return colors.primary;
     }
@@ -100,6 +102,8 @@ export function InlineDropIndicator({
         return colors.success;
       case "move-category":
         return colors.warning;
+      case "move-list":
+        return colors.primary;
       default:
         return colors.primary;
     }

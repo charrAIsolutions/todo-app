@@ -23,6 +23,7 @@ export interface DragState {
  */
 export interface DragOrigin {
   taskId: string;
+  listId: string;
   categoryId: string | null;
   parentTaskId: string | null;
   index: number;
@@ -34,6 +35,7 @@ export interface DragOrigin {
 export type DropZoneType =
   | "reorder" // Insert between tasks in same category
   | "move-category" // Move to different category
+  | "move-list" // Move to a different list
   | "nest" // Make subtask of another task
   | "unnest"; // Convert subtask to top-level task
 
@@ -42,6 +44,8 @@ export type DropZoneType =
  */
 export interface DropZone {
   type: DropZoneType;
+  /** Target list (null = same list as origin) */
+  listId: string | null;
   categoryId: string | null;
   /** For reorder: the task to insert before. null = insert at end */
   beforeTaskId: string | null;
@@ -60,6 +64,7 @@ export interface DropZone {
  */
 export interface TaskLayout {
   taskId: string;
+  listId: string;
   categoryId: string | null;
   parentTaskId: string | null;
   y: number; // Top position relative to scroll container
@@ -78,11 +83,21 @@ export interface CategoryLayout {
 }
 
 /**
+ * Layout information for a list pane (web split-view)
+ */
+export interface PaneLayout {
+  listId: string;
+  x: number;
+  width: number;
+}
+
+/**
  * Registry of all measured layouts for drop zone calculation
  */
 export interface LayoutRegistry {
   tasks: Map<string, TaskLayout>;
-  categories: Map<string | "uncategorized", CategoryLayout>;
+  categories: Map<string, CategoryLayout>; // composite key: listId:categoryId
+  panes: Map<string, PaneLayout>;
   scrollOffset: number;
   containerTop: number;
 }
@@ -127,6 +142,7 @@ export interface DragContextValue {
   registerTaskLayout: (layout: TaskLayout) => void;
   unregisterTaskLayout: (taskId: string) => void;
   registerCategoryLayout: (layout: CategoryLayout) => void;
+  registerPaneLayout: (layout: PaneLayout) => void;
 
   // Callbacks
   onDragEnd?: (event: DragEndEvent) => void;
