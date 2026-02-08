@@ -20,6 +20,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { DragProvider } from "@/components/drag";
 import type { DragEndEvent } from "@/types";
 import type { Task } from "@/types/todo";
+import { SkeletonScreen } from "@/components/skeleton";
 
 /**
  * Main todo list screen.
@@ -363,11 +364,7 @@ export default function TodoScreen() {
   }, [tasks]);
 
   if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <Text className="text-base text-text-secondary">Loading...</Text>
-      </View>
-    );
+    return <SkeletonScreen />;
   }
 
   // Get categories for active list, sorted by sortOrder
