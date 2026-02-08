@@ -96,6 +96,15 @@ type AppAction =
       };
     }
   | {
+      type: "MOVE_TASK_TO_LIST";
+      payload: {
+        taskId: string;
+        targetListId: string;
+        targetCategoryId: string | null;
+        newSortOrder: number;
+      };
+    }
+  | {
       type: "NEST_TASK";
       payload: { taskId: string; parentTaskId: string | null };
     }
@@ -381,6 +390,34 @@ function appReducer(state: AppState, action: AppAction): AppState {
             ? { ...task, categoryId, sortOrder: newSortOrder }
             : task,
         ),
+      };
+    }
+
+    case "MOVE_TASK_TO_LIST": {
+      const { taskId, targetListId, targetCategoryId, newSortOrder } =
+        action.payload;
+      return {
+        ...state,
+        tasks: state.tasks.map((task) => {
+          if (task.id === taskId) {
+            return {
+              ...task,
+              listId: targetListId,
+              categoryId: targetCategoryId,
+              sortOrder: newSortOrder,
+              parentTaskId: null, // Cross-list nesting not supported
+            };
+          }
+          // Move subtasks with their parent
+          if (task.parentTaskId === taskId) {
+            return {
+              ...task,
+              listId: targetListId,
+              categoryId: targetCategoryId,
+            };
+          }
+          return task;
+        }),
       };
     }
 

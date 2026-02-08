@@ -16,6 +16,7 @@ import type {
   DropZone,
   TaskLayout,
   CategoryLayout,
+  PaneLayout,
   LayoutRegistry,
 } from "@/types";
 import type { Task } from "@/types";
@@ -73,6 +74,7 @@ export function DragProvider({
   const layoutRegistry = useRef<LayoutRegistry>({
     tasks: new Map(),
     categories: new Map(),
+    panes: new Map(),
     scrollOffset: 0,
     containerTop: 0,
   });
@@ -95,12 +97,13 @@ export function DragProvider({
     [enabled, isDraggingShared, scale],
   );
 
+  // Track active drop zone in a ref to avoid unnecessary re-renders
+  const activeDropZoneRef = useRef<DropZone | null>(null);
+
   // Update position during drag (receives absolute position for drop zone calculation)
   // Note: Shared values for visual translation are managed by DraggableTask directly
   const updatePosition = useCallback(
     (absoluteX: number, absoluteY: number) => {
-      // Calculate active drop zone based on absolute position
-      // Filter to only categories in the same list as the dragged task
       const dropZone = calculateDropZone(
         absoluteX,
         absoluteY,
@@ -109,11 +112,24 @@ export function DragProvider({
         dragState.draggedTask?.listId ?? null,
       );
 
-      if (dropZone !== dragState.activeDropZone) {
+      const prev = activeDropZoneRef.current;
+
+      // Deep compare to avoid unnecessary re-renders
+      const changed =
+        !prev ||
+        !dropZone ||
+        prev.type !== dropZone.type ||
+        prev.listId !== dropZone.listId ||
+        prev.categoryId !== dropZone.categoryId ||
+        prev.beforeTaskId !== dropZone.beforeTaskId ||
+        prev.parentTaskId !== dropZone.parentTaskId;
+
+      if (changed) {
+        activeDropZoneRef.current = dropZone;
         setDragState((prev) => ({ ...prev, activeDropZone: dropZone }));
       }
     },
-    [dragState.dragOrigin, dragState.activeDropZone, dragState.draggedTask],
+    [dragState.dragOrigin, dragState.draggedTask],
   );
 
   // End drag (successful drop)
@@ -165,8 +181,12 @@ export function DragProvider({
   }, []);
 
   const registerCategoryLayout = useCallback((layout: CategoryLayout) => {
-    const key = layout.categoryId ?? "uncategorized";
+    const key = `${layout.listId}:${layout.categoryId ?? "uncategorized"}`;
     layoutRegistry.current.categories.set(key, layout);
+  }, []);
+
+  const registerPaneLayout = useCallback((layout: PaneLayout) => {
+    layoutRegistry.current.panes.set(layout.listId, layout);
   }, []);
 
   // Context value
@@ -180,6 +200,7 @@ export function DragProvider({
       registerTaskLayout,
       unregisterTaskLayout,
       registerCategoryLayout,
+      registerPaneLayout,
       onDragEnd,
     }),
     [
@@ -191,6 +212,7 @@ export function DragProvider({
       registerTaskLayout,
       unregisterTaskLayout,
       registerCategoryLayout,
+      registerPaneLayout,
       onDragEnd,
     ],
   );
@@ -248,13 +270,31 @@ function calculateDropZone(
 ): DropZone | null {
   if (!origin) return null;
 
-  const tasks = Array.from(registry.tasks.values());
-  if (tasks.length === 0) return null;
+  const allTasks = Array.from(registry.tasks.values());
+  if (allTasks.length === 0) return null;
 
-  // Filter categories to only those belonging to the current list
+  // --- Determine target list from X position (pane detection) ---
+  let targetListId = taskListId ?? "";
+  let targetPaneX = 0;
+  for (const [listId, pane] of registry.panes) {
+    if (absoluteX >= pane.x && absoluteX < pane.x + pane.width) {
+      targetListId = listId;
+      targetPaneX = pane.x;
+      break;
+    }
+  }
+  const isCrossListDrag = targetListId !== taskListId;
+
+  // Use pane-relative X for nest/unnest thresholds
+  const relativeX =
+    registry.panes.size > 0 ? absoluteX - targetPaneX : absoluteX;
+
+  // Filter tasks and categories by target list
+  const tasks = allTasks.filter((t) => t.listId === targetListId);
+
   const allCategories = Array.from(registry.categories.entries());
   const categories = allCategories.filter(
-    ([_, layout]) => layout.listId === taskListId,
+    ([_key, layout]) => layout.listId === targetListId,
   );
   const isSubtaskDrag = origin.parentTaskId !== null;
 
@@ -262,9 +302,9 @@ function calculateDropZone(
   let targetCategoryId: string | null = null;
 
   if (categories.length > 0) {
-    for (const [key, layout] of categories) {
+    for (const [_key, layout] of categories) {
       if (absoluteY >= layout.y && absoluteY < layout.y + layout.height) {
-        targetCategoryId = key === "uncategorized" ? null : key;
+        targetCategoryId = layout.categoryId; // Use value, not key
         break;
       }
     }
@@ -288,24 +328,11 @@ function calculateDropZone(
     }
   }
 
-  // Thresholds for nesting/unnesting based on X position
+  // Thresholds for nesting/unnesting based on pane-relative X position
   const UNNEST_THRESHOLD_X = 60;
   const NEST_THRESHOLD_X = 120;
 
-  // If dragging a subtask and moving left, unnest it
-  if (isSubtaskDrag && absoluteX < UNNEST_THRESHOLD_X) {
-    // Find the parent task to determine where to insert
-    const parentLayout = tasks.find((t) => t.taskId === origin.parentTaskId);
-    return {
-      type: "unnest",
-      categoryId: origin.categoryId,
-      beforeTaskId: null,
-      parentTaskId: null,
-      indicatorY: parentLayout ? parentLayout.y : absoluteY,
-    };
-  }
-
-  // Get top-level tasks in target category (for nesting targets)
+  // Get top-level tasks in target category
   const topLevelTasks = tasks
     .filter(
       (t) =>
@@ -315,8 +342,50 @@ function calculateDropZone(
     )
     .sort((a, b) => a.y - b.y);
 
+  // --- Cross-list branch: skip nest/unnest, just find insertion point ---
+  if (isCrossListDrag) {
+    for (const taskLayout of topLevelTasks) {
+      const taskCenter = taskLayout.y + taskLayout.height / 2;
+      if (absoluteY < taskCenter) {
+        return {
+          type: "move-list",
+          listId: targetListId,
+          categoryId: targetCategoryId,
+          beforeTaskId: taskLayout.taskId,
+          parentTaskId: null,
+          indicatorY: taskLayout.y,
+        };
+      }
+    }
+    // Insert at end
+    const lastTask = topLevelTasks[topLevelTasks.length - 1];
+    return {
+      type: "move-list",
+      listId: targetListId,
+      categoryId: targetCategoryId,
+      beforeTaskId: null,
+      parentTaskId: null,
+      indicatorY: lastTask ? lastTask.y + lastTask.height : absoluteY,
+    };
+  }
+
+  // --- Within-list logic (same as before, but using relativeX) ---
+
+  // If dragging a subtask and moving left, unnest it
+  if (isSubtaskDrag && relativeX < UNNEST_THRESHOLD_X) {
+    const parentLayout = tasks.find((t) => t.taskId === origin.parentTaskId);
+    return {
+      type: "unnest",
+      listId: targetListId,
+      categoryId: origin.categoryId,
+      beforeTaskId: null,
+      parentTaskId: null,
+      indicatorY: parentLayout ? parentLayout.y : absoluteY,
+    };
+  }
+
   // Check for nesting intent (dragging right onto a task)
-  if (absoluteX > NEST_THRESHOLD_X && !isSubtaskDrag) {
+  if (relativeX > NEST_THRESHOLD_X && !isSubtaskDrag) {
     for (const taskLayout of topLevelTasks) {
       const taskCenterStart = taskLayout.y + taskLayout.height * 0.3;
       const taskCenterEnd = taskLayout.y + taskLayout.height * 0.7;
@@ -324,6 +393,7 @@ function calculateDropZone(
       if (absoluteY >= taskCenterStart && absoluteY <= taskCenterEnd) {
         return {
           type: "nest",
+          listId: targetListId,
           categoryId: targetCategoryId,
           beforeTaskId: null,
           parentTaskId: taskLayout.taskId,
@@ -344,7 +414,6 @@ function calculateDropZone(
       )
       .sort((a, b) => a.y - b.y);
 
-    // Check if we're still in the subtask area
     const parentLayout = tasks.find((t) => t.taskId === origin.parentTaskId);
     if (parentLayout && siblingSubtasks.length > 0) {
       const firstSubtask = siblingSubtasks[0];
@@ -352,18 +421,17 @@ function calculateDropZone(
       const subtaskAreaTop = firstSubtask.y;
       const subtaskAreaBottom = lastSubtask.y + lastSubtask.height;
 
-      // If cursor is in subtask area and not trying to unnest
       if (
         absoluteY >= subtaskAreaTop - 20 &&
         absoluteY <= subtaskAreaBottom + 20 &&
-        absoluteX >= UNNEST_THRESHOLD_X
+        relativeX >= UNNEST_THRESHOLD_X
       ) {
-        // Find insertion point among siblings
         for (const subtask of siblingSubtasks) {
           const subtaskCenter = subtask.y + subtask.height / 2;
           if (absoluteY < subtaskCenter) {
             return {
               type: "reorder",
+              listId: targetListId,
               categoryId: origin.categoryId,
               beforeTaskId: subtask.taskId,
               parentTaskId: origin.parentTaskId,
@@ -372,9 +440,9 @@ function calculateDropZone(
           }
         }
 
-        // Insert at end of subtasks
         return {
           type: "reorder",
+          listId: targetListId,
           categoryId: origin.categoryId,
           beforeTaskId: null,
           parentTaskId: origin.parentTaskId,
@@ -386,6 +454,7 @@ function calculateDropZone(
     // Subtask being dragged outside subtask area = unnest
     return {
       type: "unnest",
+      listId: targetListId,
       categoryId: targetCategoryId,
       beforeTaskId: null,
       parentTaskId: null,
@@ -402,6 +471,7 @@ function calculateDropZone(
       return {
         type:
           targetCategoryId === origin.categoryId ? "reorder" : "move-category",
+        listId: targetListId,
         categoryId: targetCategoryId,
         beforeTaskId: taskLayout.taskId,
         parentTaskId: null,
@@ -414,6 +484,7 @@ function calculateDropZone(
   const lastTask = topLevelTasks[topLevelTasks.length - 1];
   return {
     type: targetCategoryId === origin.categoryId ? "reorder" : "move-category",
+    listId: targetListId,
     categoryId: targetCategoryId,
     beforeTaskId: null,
     parentTaskId: null,

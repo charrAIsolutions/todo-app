@@ -74,6 +74,7 @@ function DraggableCategorySection({
           {tasks.map((task, index) => {
             const subtasks = subtasksByParent.get(task.id) ?? [];
             const showDropBefore =
+              activeDropZone?.listId === listId &&
               activeDropZone?.categoryId === categoryId &&
               activeDropZone?.beforeTaskId === task.id &&
               activeDropZone?.type !== "nest";
@@ -124,6 +125,7 @@ function DraggableCategorySection({
           {/* Drop indicator at end of category */}
           <InlineDropIndicator
             active={
+              activeDropZone?.listId === listId &&
               activeDropZone?.categoryId === categoryId &&
               activeDropZone?.beforeTaskId === null &&
               activeDropZone?.type !== "nest"

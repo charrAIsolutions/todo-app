@@ -49,7 +49,7 @@ export function DraggableTask({
     index,
     isSubtask,
   );
-  const { register, unregister } = useLayoutRegistration(task.id);
+  const { register, unregister } = useLayoutRegistration(task.id, task.listId);
 
   const layoutRef = useRef({ y: 0, height: 0 });
   const viewRef = useRef<View>(null);

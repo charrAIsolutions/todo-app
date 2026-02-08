@@ -22,6 +22,7 @@ export function useDraggable(
     (absoluteX: number, absoluteY: number) => {
       const origin: DragOrigin = {
         taskId: task.id,
+        listId: task.listId,
         categoryId: task.categoryId,
         parentTaskId: task.parentTaskId,
         index,
@@ -70,7 +71,7 @@ export function useDraggable(
 /**
  * Hook for measuring and registering layout
  */
-export function useLayoutRegistration(taskId: string) {
+export function useLayoutRegistration(taskId: string, listId: string) {
   const { registerTaskLayout, unregisterTaskLayout } = useDragContext();
 
   const register = useCallback(
@@ -83,6 +84,7 @@ export function useLayoutRegistration(taskId: string) {
     ) => {
       registerTaskLayout({
         taskId,
+        listId,
         y,
         height,
         categoryId,
@@ -90,7 +92,7 @@ export function useLayoutRegistration(taskId: string) {
         isSubtask,
       });
     },
-    [taskId, registerTaskLayout],
+    [taskId, listId, registerTaskLayout],
   );
 
   const unregister = useCallback(() => {
