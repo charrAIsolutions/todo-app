@@ -46,6 +46,9 @@ coverage/
 credentials.json
 .eas/
 
+# Claude Code
+.claude/
+
 # Misc
 *.pem
 *.tgz
