@@ -1,6 +1,6 @@
 # Last updated: February 2026
 
-# Version: 0.0.9.0
+# Version: 0.0.8.6
 
 <!-- It is 2026, not 2025 -->
 
@@ -27,6 +27,7 @@ You are a senior React Native developer and mentor. Your student (Charles) is a 
 ## Tech Stack Details
 
 - **Expo SDK**: 54 (managed workflow)
+- **Deployment**: Vercel (static export, auto-deploys on push to main)
 - **Styling**: NativeWind v4 with CSS variables for theming
 - **Animations**: react-native-reanimated (spring-based micro-interactions)
 - **State**: React Context + useReducer (in `store/AppContext.tsx`)
@@ -43,6 +44,7 @@ app/                    # Expo Router screens (file-based routing)
   global.css            # CSS variables for light/dark colors
 components/             # Reusable UI components
   drag/                 # Drag-and-drop components
+  skeleton/             # Loading skeleton placeholders
 hooks/                  # Custom React hooks
   useTheme.ts           # Theme hook for preference & effective scheme
 lib/                    # Utilities, helpers, constants
@@ -55,6 +57,7 @@ store/                  # State management
   ThemeContext.tsx      # Theme state (light/dark/system)
 types/                  # TypeScript type definitions
   theme.ts              # ThemePreference, ColorScheme types
+planning/               # Implementation plans and reviews
 ```
 
 ## Code Conventions
@@ -126,9 +129,20 @@ npx expo start           # Start dev server
 npx expo start --web     # Start web only
 npx expo start --ios     # Start iOS simulator
 npx expo start --android # Start Android emulator
+npm run build:web        # Build static web export (output: dist/)
 npm run lint             # Run ESLint
 npm run typecheck        # Run TypeScript compiler check
 ```
+
+## Deployment
+
+- **Platform**: Vercel (static hosting)
+- **URL**: https://todo-app-ten-blush-46.vercel.app
+- **Build command**: `npx expo export --platform web`
+- **Output directory**: `dist/`
+- **Config**: `vercel.json` (rewrites for SPA routing, cache headers for static assets)
+- **Auto-deploy**: Pushes to `main` trigger automatic deployments via GitHub integration
+- **Manual deploy**: Run `vercel --prod` from project root
 
 ## Git Workflow
 
@@ -346,7 +360,7 @@ interface Task {
 
 **Non-goals (intentional):**
 
-- Cross-list drag-and-drop (drag stays within single list)
+- ~~Cross-list drag-and-drop~~ (implemented in Phase 8e)
 - Multi-list view on mobile
 
 ### Phase 8: UI Animations & Dark Mode ✓
@@ -407,12 +421,39 @@ Built by two parallel agents (Module 5 practice: parallel delegation).
 
 **Known issues (see `open-issues.md`):**
 
-- Bug: Dragging subtask to new category sends it to uncategorized (High)
+- ~~Bug: Dragging subtask to new category sends it to uncategorized~~ (Fixed in Phase 8e)
 - Missing: useReducedMotion accessibility hook (Warning)
 - Suggestion: SPRING type too loose (use `as const satisfies`)
 - Suggestion: Missing accessibility labels on checkbox/row
 
-### Phase 9: Empty State Messaging ✓
+### Phase 8c: Loading Skeletons ✓
+
+- `components/skeleton/SkeletonScreen.tsx` - Full-screen skeleton that mirrors TodoScreen layout
+- `components/skeleton/SkeletonBone.tsx` - Base building block (rounded rect with `bg-skeleton` color)
+- `components/skeleton/SkeletonTabBar.tsx` - Skeleton tab bar placeholder
+- `components/skeleton/SkeletonCategorySection.tsx` - Skeleton category with configurable task count
+- `components/skeleton/SkeletonTaskItem.tsx` - Skeleton task row with checkbox and title bone
+- `components/skeleton/SkeletonAddTaskInput.tsx` - Skeleton input bar
+- `lib/animations.ts` - Added `SKELETON` constants (opacity values, timing)
+- `app/_layout.tsx` - Extended Expo splash screen to cover font loading + data hydration
+- `app/global.css` - Added `--skeleton` CSS variable for light/dark
+- `tailwind.config.js` - Added `skeleton` color token
+
+**Pattern: Shared pulse animation**
+
+- Single `useSharedValue` drives opacity for all bones via one `Animated.View` wrapper
+- `withRepeat` + `withSequence` creates smooth pulse cycle
+- No per-bone animation overhead — all bones animate in sync
+
+**Working:**
+
+- ✅ Skeleton mirrors real layout (tab bar, 3 category sections, input bar)
+- ✅ Synchronized pulse animation across all skeleton elements
+- ✅ Expo splash screen covers both font loading and data hydration (no blank flash)
+- ✅ Dark mode compatible via `bg-skeleton` semantic token
+- ✅ Skeleton disappears once `isHydrated` becomes true
+
+### Phase 8d: Empty State Messaging ✓
 
 - `components/EmptyState.tsx` - Reusable component with full (centered hero) and compact (inline banner) modes
 - `components/CategorySection.tsx` - Added hint text inside empty category dashed boxes
@@ -444,32 +485,75 @@ Built by two parallel agents (Module 5 practice: parallel delegation).
 - ✅ Dark mode compatible via semantic color tokens
 - ✅ Entrance animation with initial-render skip pattern
 
+### Phase 8e: Cross-List Drag-and-Drop ✓
+
+Enables dragging tasks between lists in the web split-view. Also fixed the subtask unnest bug from Phase 8a.
+
+- `store/AppContext.tsx` - Added `MOVE_TASK_TO_LIST` reducer (moves task + subtasks to target list)
+- `hooks/useAppData.ts` - Added `moveTaskToList` dispatcher
+- `types/drag.ts` - Added `listId` to `DragOrigin`, `TaskLayout`, `DropZone`; added `PaneLayout`; added `"move-list"` drop zone type
+- `components/drag/DragProvider.tsx` - 2D drop zone calculation with pane detection, composite category keys, pane-relative X for nest/unnest thresholds, deep compare to reduce re-renders
+- `components/drag/DraggableTask.tsx` - Passes `task.listId` to layout registration
+- `components/drag/useDragDrop.ts` - `listId` in `DragOrigin` and `TaskLayout`
+- `components/CategorySection.tsx` - `listId` matching on drop indicator visibility
+- `components/drag/DropIndicator.tsx` - `"move-list"` color case
+- `app/(tabs)/index.tsx` - Extracted `ListPane` component, lifted DragProvider to wrap all panes, fixed `overflow-hidden` clipping, added `"move-list"` handler, fixed subtask unnest bug
+
+**Key architectural decisions:**
+
+- Lifted single `DragProvider` wraps all web panes (gesture continuity requires one provider)
+- Composite category keys (`${listId}:${categoryId}`) prevent registry collisions
+- Pane-relative X coordinates for nest/unnest thresholds (absolute X breaks in non-first panes)
+- Tasks filtered by `targetListId` in drop zone calculation (prevents Y-overlap interference)
+- Subtasks move with parent on cross-list drag
+- Cross-list drops only support category placement (no nesting into tasks in target list)
+
+**Working:**
+
+- ✅ Drag tasks between lists in web split-view
+- ✅ Task lands in category at drop position
+- ✅ Subtasks follow parent on cross-list move
+- ✅ Drop indicators show only in target pane
+- ✅ Dragged item visible when crossing pane boundaries (overflow-hidden fix)
+- ✅ Within-list drag unaffected (nest/unnest thresholds use pane-relative X)
+- ✅ Mobile unaffected (no panes registered, single DragProvider)
+- ✅ Fixed: subtask unnest now respects target category (was going to uncategorized)
+
+**Non-goals (v1):**
+
+- Auto-scrolling horizontal ScrollView during drag
+- Cross-list nesting (dropping onto a task to make subtask)
+- Mobile cross-list drag
+
 ## Current State
 
-**Done (Phases 1-9):**
+**Done (Phases 1-8):**
 
 - Full data model with lists, categories, tasks, subtasks
 - Multi-list tabs with web split-view
-- Drag-and-drop reordering (within lists)
+- Drag-and-drop reordering (within and across lists)
 - Task detail modal with all CRUD operations
 - "Show on open" for web launch preferences
 - Local storage persistence
 - UI animations (spring-based micro-interactions via Reanimated)
 - Dark mode with NativeWind v4
+- Loading skeleton UI with synchronized pulse animation
 - Context-aware empty state messaging with celebration states
+- Cross-list drag-and-drop for web split-view
+- Vercel deployment with auto-deploy on push to main
 
 **In Progress:**
 
-- None - all planned phases complete
+- None - all Phase 8 sub-phases complete
 
 **Next (suggested):**
 
-- Phase 10: iOS App Store deployment (EAS Build, app icons, splash screens)
-- Phase 11: Cloud sync (optional - requires auth)
+- Phase 9: iOS App Store deployment (EAS Build, app icons, splash screens)
+- Phase 10: Cloud sync (optional - requires auth)
 
 ## Phases
 
-(Phases 1-9 complete)
+(Phases 1-8 complete, including 8a-8e sub-phases)
 
 ## Versioning
 
@@ -478,11 +562,13 @@ Format: `Release.PreRelease.Phase.Change`
 - **Release** (0): Major release version (0 = pre-release)
 - **PreRelease** (0): Stable pre-release version (0 = unstable)
 - **Phase** (8): Development phase number
-- **Change** (0): Incremental change within phase
+- **Change** (6): Incremental change within phase
 
-Example: `0.0.8.0` = Release 0, PreRelease 0, Phase 8, Change 0
+Example: `0.0.8.6` = Release 0, PreRelease 0, Phase 8, Change 6
 
-Display title shows full version (0.0.8.0), package.json uses semver (0.0.8).
+Display title shows full version (0.0.8.6), package.json uses semver (0.0.8).
+
+**Note:** Code version references are behind docs — `app/(tabs)/_layout.tsx` shows 0.0.8.0, `app.json` shows 0.0.7. Update these when deploying.
 
 ## Notes
 

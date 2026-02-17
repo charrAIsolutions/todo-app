@@ -5,11 +5,14 @@
 
 ## Quick Reference
 
-- **Version**: 0.0.7.2
-- **Stack**: Expo 54, React Native, TypeScript, StyleSheet.create()
+- **Version**: 0.0.8.6
+- **Stack**: Expo 54, React Native, TypeScript, NativeWind v4 (Tailwind CSS)
+- **Styling**: NativeWind v4 with CSS variables for automatic light/dark theming
+- **Animations**: react-native-reanimated (spring-based micro-interactions)
 - **State**: React Context + useReducer (`store/AppContext.tsx`)
 - **Storage**: AsyncStorage (`lib/storage.ts`)
 - **Navigation**: Expo Router (file-based routing)
+- **Theming**: NativeWind + ThemeContext (`store/ThemeContext.tsx`)
 
 ## Versioning
 
@@ -22,9 +25,10 @@ Format: `Release.PreRelease.Phase.Change`
 
 Update version in:
 
-- `app/(tabs)/_layout.tsx` - Display title (full: 0.0.7.2)
-- `app.json` - Expo config (semver: 0.0.7)
-- `package.json` - npm version (semver: 0.0.7)
+- `CLAUDE.md` - Header (full: 0.0.8.6)
+- `app/(tabs)/_layout.tsx` - Display title (full: 0.0.8.6)
+- `app.json` - Expo config (semver: 0.0.8)
+- `package.json` - npm version (semver: 0.0.8)
 
 ## Project Structure
 
@@ -34,23 +38,35 @@ app/                    # Expo Router screens
     index.tsx           # Main todo screen (lists, tasks, split-view)
     _layout.tsx         # Tab bar config
   task/[id].tsx         # Task detail modal
-  _layout.tsx           # Root layout (providers)
+  _layout.tsx           # Root layout (providers, splash screen)
+  global.css            # CSS variables for light/dark colors
+  modal.tsx             # Settings screen (theme toggle)
 components/
-  drag/                 # Drag-and-drop system
+  drag/                 # Drag-and-drop system (cross-list capable)
+  skeleton/             # Loading skeleton placeholders
+  EmptyState.tsx        # Context-aware empty state (full/compact modes)
   ListTabBar.tsx        # List tabs at top
   ListTab.tsx           # Individual tab
   CategorySection.tsx   # Category header + tasks
-  TaskItem.tsx          # Task row
-  AddTaskInput.tsx      # New task input
+  CategoryHeader.tsx    # Bold category header with count
+  TaskItem.tsx          # Task row with checkbox + animations
+  AddTaskInput.tsx      # New task input with press feedback
 hooks/
   useAppData.ts         # Main data hook (selectors + dispatchers)
+  useTheme.ts           # Theme preference + effective scheme
 store/
-  AppContext.tsx        # State context + reducer
+  AppContext.tsx        # State context + reducer (15+ actions)
+  ThemeContext.tsx      # Theme state (light/dark/system)
 lib/
-  storage.ts            # AsyncStorage wrappers
+  animations.ts         # Shared constants (SPRING, DURATION, SKELETON)
+  colors.ts             # Semantic color values for React Navigation
+  storage.ts            # AsyncStorage wrappers (includes theme)
+  utils.ts              # General utilities
 types/
   todo.ts               # TodoList, Category, Task interfaces
-  drag.ts               # Drag-and-drop types
+  drag.ts               # Drag-and-drop types (includes PaneLayout)
+  theme.ts              # ThemePreference, ColorScheme types
+planning/               # Implementation plans and reviews
 ```
 
 ## Data Model
@@ -101,7 +117,9 @@ const {
   updateTask,
   toggleTask,
   moveTask,
+  moveTaskToList, // Cross-list drag
   nestTask,
+  reorderTasks,
   addList,
   updateList,
   deleteList,
@@ -110,6 +128,18 @@ const {
   toggleListSelection,
 } = useAppData();
 ```
+
+### NativeWind Theming
+
+```tsx
+// Colors adapt automatically via CSS variables -- no dark: prefix needed
+<View className="bg-surface text-text" />;
+
+// Access theme state
+const { preference, effectiveScheme, setPreference } = useTheme();
+```
+
+**Semantic Color Tokens:** `background`, `surface`, `surface-secondary`, `text`, `text-secondary`, `text-muted`, `border`, `primary`, `success`, `warning`, `danger`, `skeleton`
 
 ### Platform Detection
 
@@ -124,14 +154,45 @@ const isWeb = Platform.OS === "web";
 - `toggleListSelection(id)`: Add/remove list from selection
 - Each pane width: `Math.max(windowWidth / 4, 360)`
 - Horizontal scroll when panes exceed screen width
+- Cross-list drag enabled (single lifted DragProvider wraps all panes)
+
+### Drag-and-Drop
+
+- Custom system using react-native-gesture-handler + Reanimated
+- Single `DragProvider` wraps all panes on web (gesture continuity)
+- Layout registry uses composite keys (`${listId}:${categoryId}`) for multi-list support
+- Pane-relative X coordinates for nest/unnest thresholds
+- `"move-list"` drop zone type for cross-list moves
+
+### Loading State
+
+- `SkeletonScreen` mirrors the real layout with synchronized pulse animation
+- Expo splash screen extended to cover font loading + data hydration
+- `isHydrated` flag in AppContext controls skeleton visibility
+
+### Animation Patterns
+
+- Entry animations skip initial render (`hasRendered` ref pattern)
+- `LinearTransition` only in static sections (conflicts with drag-drop measurements)
+- `AnimatedPressable` created at module scope to avoid remount on re-render
+- Shared `SPRING` configs in `lib/animations.ts`
 
 ## Commands
 
 ```bash
 npx expo start --web     # Dev server (web)
 npx expo start --ios     # iOS simulator
+npm run build:web        # Static web export (dist/)
 npm run typecheck        # TypeScript check
+npm run test             # Run tests
+vercel --prod            # Manual deploy to Vercel
 ```
+
+## Deployment
+
+- **Vercel**: Auto-deploys on push to `main`
+- **URL**: https://todo-app-ten-blush-46.vercel.app
+- **Config**: `vercel.json` (SPA rewrites + asset caching)
 
 ## Git Conventions
 
@@ -147,14 +208,26 @@ npm run typecheck        # TypeScript check
 - Test on web first, then mobile
 - No `console.log` in committed code
 
-## Current State (Phase 7 Complete)
+## Current State (Phase 8 Complete)
 
-All core features implemented:
+All core features implemented through Phase 8 (including sub-phases 8a-8e):
 
 - Multi-list tabs with split-view (web)
 - Categories within lists
 - Tasks with subtasks (one level)
-- Drag-and-drop reordering
+- Drag-and-drop reordering (within and across lists)
 - Task detail modal
 - List/category CRUD
 - "Show on open" for web launch
+- UI animations (spring-based micro-interactions)
+- Dark mode with NativeWind v4
+- Loading skeleton UI
+- Context-aware empty state messaging
+- Cross-list drag-and-drop (web split-view)
+- Vercel deployment (auto-deploys on push to main)
+
+## Known Issues
+
+- Missing: `useReducedMotion` accessibility hook
+- Suggestion: SPRING type too loose (use `as const satisfies`)
+- Suggestion: Missing accessibility labels on checkbox/row
