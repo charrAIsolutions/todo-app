@@ -42,6 +42,10 @@ yarn-error.*
 coverage/
 *.lcov
 
+# EAS
+credentials.json
+.eas/
+
 # Misc
 *.pem
 *.tgz
