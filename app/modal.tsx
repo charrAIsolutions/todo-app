@@ -66,10 +66,10 @@ export default function ModalScreen() {
 
           <View className="bg-surface-secondary rounded-lg p-4">
             <Text className="text-base text-text mb-2">
-              <Text className="font-semibold">Version:</Text> 0.0.8.0
+              <Text className="font-semibold">Version:</Text> 0.0.9.1
             </Text>
             <Text className="text-base text-text mb-2">
-              <Text className="font-semibold">Phase:</Text> 8 - Dark Mode
+              <Text className="font-semibold">Phase:</Text> 9 - iOS TestFlight
             </Text>
             <Text className="text-sm text-text-muted mt-2">
               A personal todo app built with React Native, Expo, and NativeWind.

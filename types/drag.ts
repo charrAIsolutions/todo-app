@@ -140,7 +140,10 @@ export interface DragContextValue {
 
   // Layout registration
   registerTaskLayout: (layout: TaskLayout) => void;
-  unregisterTaskLayout: (taskId: string) => void;
+  unregisterTaskLayout: (
+    taskId: string,
+    expectedCategoryId?: string | null,
+  ) => void;
   registerCategoryLayout: (layout: CategoryLayout) => void;
   registerPaneLayout: (layout: PaneLayout) => void;
 

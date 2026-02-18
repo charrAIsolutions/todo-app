@@ -70,6 +70,11 @@ export function DragProvider({
   const isDraggingShared = useSharedValue(false);
   const scale = useSharedValue(1);
 
+  // Refs for values that must be readable during an active gesture
+  // (gesture handler worklets on native capture stale closure references)
+  const dragOriginRef = useRef<DragOrigin | null>(null);
+  const draggedTaskRef = useRef<Task | null>(null);
+
   // Layout registry for drop zone calculation
   const layoutRegistry = useRef<LayoutRegistry>({
     tasks: new Map(),
@@ -83,6 +88,11 @@ export function DragProvider({
   const startDrag = useCallback(
     (task: Task, origin: DragOrigin) => {
       if (!enabled) return;
+
+      // Set refs FIRST so they're available to stale closures immediately
+      dragOriginRef.current = origin;
+      draggedTaskRef.current = task;
+      activeDropZoneRef.current = null;
 
       setDragState({
         isDragging: true,
@@ -102,45 +112,50 @@ export function DragProvider({
 
   // Update position during drag (receives absolute position for drop zone calculation)
   // Note: Shared values for visual translation are managed by DraggableTask directly
-  const updatePosition = useCallback(
-    (absoluteX: number, absoluteY: number) => {
-      const dropZone = calculateDropZone(
-        absoluteX,
-        absoluteY,
-        layoutRegistry.current,
-        dragState.dragOrigin,
-        dragState.draggedTask?.listId ?? null,
-      );
+  // Reads from refs (not state) to avoid stale closure issues with native gesture handlers
+  const updatePosition = useCallback((absoluteX: number, absoluteY: number) => {
+    const dropZone = calculateDropZone(
+      absoluteX,
+      absoluteY,
+      layoutRegistry.current,
+      dragOriginRef.current,
+      draggedTaskRef.current?.listId ?? null,
+    );
 
-      const prev = activeDropZoneRef.current;
+    const prev = activeDropZoneRef.current;
 
-      // Deep compare to avoid unnecessary re-renders
-      const changed =
-        !prev ||
-        !dropZone ||
-        prev.type !== dropZone.type ||
-        prev.listId !== dropZone.listId ||
-        prev.categoryId !== dropZone.categoryId ||
-        prev.beforeTaskId !== dropZone.beforeTaskId ||
-        prev.parentTaskId !== dropZone.parentTaskId;
+    // Deep compare to avoid unnecessary re-renders
+    const changed =
+      !prev ||
+      !dropZone ||
+      prev.type !== dropZone.type ||
+      prev.listId !== dropZone.listId ||
+      prev.categoryId !== dropZone.categoryId ||
+      prev.beforeTaskId !== dropZone.beforeTaskId ||
+      prev.parentTaskId !== dropZone.parentTaskId;
 
-      if (changed) {
-        activeDropZoneRef.current = dropZone;
-        setDragState((prev) => ({ ...prev, activeDropZone: dropZone }));
-      }
-    },
-    [dragState.dragOrigin, dragState.draggedTask],
-  );
-
-  // End drag (successful drop)
-  // Note: Shared values (translateX/Y, scale) are reset by DraggableTask.onFinalize with spring animation
-  const endDrag = useCallback(() => {
-    if (dragState.draggedTask && dragState.activeDropZone && onDragEnd) {
-      onDragEnd({
-        task: dragState.draggedTask,
-        dropZone: dragState.activeDropZone,
-      });
+    if (changed) {
+      activeDropZoneRef.current = dropZone;
+      setDragState((prev) => ({ ...prev, activeDropZone: dropZone }));
     }
+  }, []);
+
+  // End drag — reads refs to determine if it's a valid drop or a cancel.
+  // This avoids stale closure issues: native gesture handlers capture old function
+  // references, but refs always point to current values.
+  // Note: Shared values (translateX/Y, scale) are reset by DraggableTask.onFinalize
+  const endDrag = useCallback(() => {
+    const task = draggedTaskRef.current;
+    const dropZone = activeDropZoneRef.current;
+
+    if (task && dropZone && onDragEnd) {
+      onDragEnd({ task, dropZone });
+    }
+
+    // Reset refs
+    dragOriginRef.current = null;
+    draggedTaskRef.current = null;
+    activeDropZoneRef.current = null;
 
     // Reset React state (shared values handled by gesture's onFinalize)
     setDragState({
@@ -151,16 +166,16 @@ export function DragProvider({
     });
 
     isDraggingShared.value = false;
-  }, [
-    dragState.draggedTask,
-    dragState.activeDropZone,
-    onDragEnd,
-    isDraggingShared,
-  ]);
+  }, [onDragEnd, isDraggingShared]);
 
   // Cancel drag (no valid drop zone)
   // Note: Shared values reset by DraggableTask.onFinalize
   const cancelDrag = useCallback(() => {
+    // Reset refs
+    dragOriginRef.current = null;
+    draggedTaskRef.current = null;
+    activeDropZoneRef.current = null;
+
     setDragState({
       isDragging: false,
       draggedTask: null,
@@ -176,9 +191,19 @@ export function DragProvider({
     layoutRegistry.current.tasks.set(layout.taskId, layout);
   }, []);
 
-  const unregisterTaskLayout = useCallback((taskId: string) => {
-    layoutRegistry.current.tasks.delete(taskId);
-  }, []);
+  const unregisterTaskLayout = useCallback(
+    (taskId: string, expectedCategoryId?: string | null) => {
+      // When expectedCategoryId is provided, only unregister if it matches.
+      // This prevents exit animations from removing a newer registration
+      // (old component unmounts 200ms after new component already registered).
+      if (expectedCategoryId !== undefined) {
+        const existing = layoutRegistry.current.tasks.get(taskId);
+        if (existing && existing.categoryId !== expectedCategoryId) return;
+      }
+      layoutRegistry.current.tasks.delete(taskId);
+    },
+    [],
+  );
 
   const registerCategoryLayout = useCallback((layout: CategoryLayout) => {
     const key = `${layout.listId}:${layout.categoryId ?? "uncategorized"}`;

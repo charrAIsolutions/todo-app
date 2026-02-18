@@ -3,6 +3,7 @@ import { View, LayoutChangeEvent, Platform } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
+  useSharedValue,
   withSpring,
   withTiming,
   runOnJS,
@@ -53,7 +54,10 @@ export function DraggableTask({
 
   const layoutRef = useRef({ y: 0, height: 0 });
   const viewRef = useRef<View>(null);
-  const dragStartPosRef = useRef({ x: 0, y: 0 });
+  // Shared values for drag start position — must be readable on UI thread
+  // (React refs written via runOnJS aren't visible to worklets in time)
+  const dragStartX = useSharedValue(0);
+  const dragStartY = useSharedValue(0);
   const isDragActiveRef = useRef(false);
   const justDraggedRef = useRef(false);
 
@@ -78,18 +82,16 @@ export function DraggableTask({
     };
   }, [unregister]);
 
-  // Helper to store start position and activate drag
-  const setDragStart = useCallback((x: number, y: number) => {
-    dragStartPosRef.current = { x, y };
-  }, []);
-
   // Helper to activate drag (called when gesture starts after threshold)
-  const activateDrag = useCallback(() => {
-    isDragActiveRef.current = true;
-    justDraggedRef.current = true;
-    triggerHaptic("start");
-    handlers.onDragStart(dragStartPosRef.current.x, dragStartPosRef.current.y);
-  }, [handlers]);
+  const activateDrag = useCallback(
+    (startX: number, startY: number) => {
+      isDragActiveRef.current = true;
+      justDraggedRef.current = true;
+      triggerHaptic("start");
+      handlers.onDragStart(startX, startY);
+    },
+    [handlers],
+  );
 
   // Helper to mark drag as finished (with cooldown for onPress)
   const markDragFinished = useCallback(() => {
@@ -105,24 +107,23 @@ export function DraggableTask({
     .activeOffsetX([-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE])
     .activeOffsetY([-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE])
     .onStart((event) => {
-      // Store the absolute start position for drop zone calculations
+      // Store absolute start position in shared values (UI thread accessible)
       // Translation values start at 0 (relative to touch start)
-      runOnJS(setDragStart)(
-        event.absoluteX - event.translationX,
-        event.absoluteY - event.translationY,
-      );
-      runOnJS(activateDrag)();
+      dragStartX.value = event.absoluteX - event.translationX;
+      dragStartY.value = event.absoluteY - event.translationY;
+      runOnJS(activateDrag)(dragStartX.value, dragStartY.value);
     })
     .onUpdate((event) => {
       sharedValues.translateX.value = event.translationX;
       sharedValues.translateY.value = event.translationY;
-      const absoluteX = dragStartPosRef.current.x + event.translationX;
-      const absoluteY = dragStartPosRef.current.y + event.translationY;
+      // Compute absolute position on UI thread using shared values
+      const absoluteX = dragStartX.value + event.translationX;
+      const absoluteY = dragStartY.value + event.translationY;
       runOnJS(handlers.onDragUpdate)(absoluteX, absoluteY);
     })
     .onEnd((event) => {
       runOnJS(triggerHaptic)("drop");
-      runOnJS(handlers.onDragEnd)(event.translationX, event.translationY);
+      runOnJS(handlers.onDragEnd)();
       runOnJS(markDragFinished)();
     })
     .onFinalize(() => {
