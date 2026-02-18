@@ -11,8 +11,7 @@ export function useDraggable(
   index: number,
   isSubtask: boolean = false,
 ) {
-  const { startDrag, updatePosition, endDrag, cancelDrag, dragState } =
-    useDragContext();
+  const { startDrag, updatePosition, endDrag, dragState } = useDragContext();
   const sharedValues = useDragSharedValues();
 
   const originRef = useRef<DragOrigin | null>(null);
@@ -41,17 +40,13 @@ export function useDraggable(
     [updatePosition],
   );
 
-  const handleDragEnd = useCallback(
-    (translationX: number, translationY: number) => {
-      // Check if we have a valid drop zone
-      if (dragState.activeDropZone) {
-        endDrag();
-      } else {
-        cancelDrag();
-      }
-    },
-    [dragState.activeDropZone, endDrag, cancelDrag],
-  );
+  const handleDragEnd = useCallback(() => {
+    // Always call endDrag — DragProvider reads activeDropZoneRef internally
+    // to decide whether it's a valid drop or a cancel.
+    // This avoids stale closure issues where the gesture handler on native
+    // captures an old dragState.activeDropZone value.
+    endDrag();
+  }, [endDrag]);
 
   const isDragged =
     dragState.isDragging && dragState.draggedTask?.id === task.id;
@@ -74,6 +69,10 @@ export function useDraggable(
 export function useLayoutRegistration(taskId: string, listId: string) {
   const { registerTaskLayout, unregisterTaskLayout } = useDragContext();
 
+  // Track the categoryId we registered with, so unregister can be conditional.
+  // This prevents exit animation cleanup from removing a newer registration.
+  const registeredCategoryRef = useRef<string | null>(null);
+
   const register = useCallback(
     (
       y: number,
@@ -82,6 +81,7 @@ export function useLayoutRegistration(taskId: string, listId: string) {
       parentTaskId: string | null,
       isSubtask: boolean,
     ) => {
+      registeredCategoryRef.current = categoryId;
       registerTaskLayout({
         taskId,
         listId,
@@ -96,7 +96,7 @@ export function useLayoutRegistration(taskId: string, listId: string) {
   );
 
   const unregister = useCallback(() => {
-    unregisterTaskLayout(taskId);
+    unregisterTaskLayout(taskId, registeredCategoryRef.current);
   }, [taskId, unregisterTaskLayout]);
 
   return { register, unregister };
