@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { View, TextInput, Keyboard, Pressable } from "react-native";
+import { useState, useRef } from "react";
+import { View, TextInput, Pressable } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -26,6 +26,7 @@ export function AddTaskInput({
   placeholder = "Add a task...",
 }: AddTaskInputProps) {
   const [title, setTitle] = useState("");
+  const inputRef = useRef<TextInput>(null);
   const buttonScale = useSharedValue(1);
 
   const handleSubmit = () => {
@@ -33,7 +34,7 @@ export function AddTaskInput({
     if (trimmed) {
       onAddTask(trimmed);
       setTitle("");
-      Keyboard.dismiss?.();
+      inputRef.current?.focus();
     }
   };
 
@@ -54,12 +55,14 @@ export function AddTaskInput({
   return (
     <View className="flex-row items-center px-4 py-3 border-t border-border bg-surface">
       <TextInput
+        ref={inputRef}
         className="flex-1 h-11 px-4 bg-surface-secondary rounded-full text-base text-text mr-3"
         value={title}
         onChangeText={setTitle}
         placeholder={placeholder}
         placeholderTextColor="rgb(var(--color-text-muted))"
         onSubmitEditing={handleSubmit}
+        blurOnSubmit={false}
         returnKeyType="done"
       />
       <AnimatedPressable

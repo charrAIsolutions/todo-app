@@ -103,8 +103,18 @@ export function TaskItem({
       {/* Animated Checkbox */}
       <Pressable onPress={handleToggle}>
         <Animated.View
-          className="w-6 h-6 rounded-full border-2 mr-3 items-center justify-center"
-          style={checkboxAnimatedStyle}
+          style={[
+            {
+              width: 24,
+              height: 24,
+              borderRadius: 12,
+              borderWidth: 2,
+              marginRight: 12,
+              alignItems: "center",
+              justifyContent: "center",
+            },
+            checkboxAnimatedStyle,
+          ]}
         >
           {task.completed && (
             <Animated.Text

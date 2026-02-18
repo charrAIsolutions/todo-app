@@ -300,19 +300,13 @@ function calculateDropZone(
 
   // --- Determine target list from X position (pane detection) ---
   let targetListId = taskListId ?? "";
-  let targetPaneX = 0;
   for (const [listId, pane] of registry.panes) {
     if (absoluteX >= pane.x && absoluteX < pane.x + pane.width) {
       targetListId = listId;
-      targetPaneX = pane.x;
       break;
     }
   }
   const isCrossListDrag = targetListId !== taskListId;
-
-  // Use pane-relative X for nest/unnest thresholds
-  const relativeX =
-    registry.panes.size > 0 ? absoluteX - targetPaneX : absoluteX;
 
   // Filter tasks and categories by target list
   const tasks = allTasks.filter((t) => t.listId === targetListId);
@@ -353,9 +347,24 @@ function calculateDropZone(
     }
   }
 
-  // Thresholds for nesting/unnesting based on pane-relative X position
-  const UNNEST_THRESHOLD_X = 60;
-  const NEST_THRESHOLD_X = 120;
+  // If no category matched by Y region, snap to nearest category by distance
+  // This prevents tasks from accidentally landing in uncategorized when dropped
+  // in the gap between categories, above the first, or below the last.
+  if (targetCategoryId === null && categories.length > 0) {
+    let closestCategoryId: string | null = null;
+    let closestDistance = Infinity;
+    for (const [_key, layout] of categories) {
+      const categoryCenter = layout.y + layout.height / 2;
+      const distance = Math.abs(absoluteY - categoryCenter);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestCategoryId = layout.categoryId;
+      }
+    }
+    if (closestCategoryId !== null) {
+      targetCategoryId = closestCategoryId;
+    }
+  }
 
   // Get top-level tasks in target category
   const topLevelTasks = tasks
@@ -394,39 +403,7 @@ function calculateDropZone(
     };
   }
 
-  // --- Within-list logic (same as before, but using relativeX) ---
-
-  // If dragging a subtask and moving left, unnest it
-  if (isSubtaskDrag && relativeX < UNNEST_THRESHOLD_X) {
-    const parentLayout = tasks.find((t) => t.taskId === origin.parentTaskId);
-    return {
-      type: "unnest",
-      listId: targetListId,
-      categoryId: origin.categoryId,
-      beforeTaskId: null,
-      parentTaskId: null,
-      indicatorY: parentLayout ? parentLayout.y : absoluteY,
-    };
-  }
-
-  // Check for nesting intent (dragging right onto a task)
-  if (relativeX > NEST_THRESHOLD_X && !isSubtaskDrag) {
-    for (const taskLayout of topLevelTasks) {
-      const taskCenterStart = taskLayout.y + taskLayout.height * 0.3;
-      const taskCenterEnd = taskLayout.y + taskLayout.height * 0.7;
-
-      if (absoluteY >= taskCenterStart && absoluteY <= taskCenterEnd) {
-        return {
-          type: "nest",
-          listId: targetListId,
-          categoryId: targetCategoryId,
-          beforeTaskId: null,
-          parentTaskId: taskLayout.taskId,
-          indicatorY: taskLayout.y + taskLayout.height / 2,
-        };
-      }
-    }
-  }
+  // --- Within-list logic ---
 
   // If dragging a subtask within same parent, handle subtask reordering
   if (isSubtaskDrag) {
@@ -448,8 +425,7 @@ function calculateDropZone(
 
       if (
         absoluteY >= subtaskAreaTop - 20 &&
-        absoluteY <= subtaskAreaBottom + 20 &&
-        relativeX >= UNNEST_THRESHOLD_X
+        absoluteY <= subtaskAreaBottom + 20
       ) {
         for (const subtask of siblingSubtasks) {
           const subtaskCenter = subtask.y + subtask.height / 2;
@@ -476,15 +452,9 @@ function calculateDropZone(
       }
     }
 
-    // Subtask being dragged outside subtask area = unnest
-    return {
-      type: "unnest",
-      listId: targetListId,
-      categoryId: targetCategoryId,
-      beforeTaskId: null,
-      parentTaskId: null,
-      indicatorY: absoluteY,
-    };
+    // Subtask dragged outside subtask area = cancel (snap back)
+    // Unnesting is only available via the task detail menu
+    return null;
   }
 
   // Standard top-level task reorder - find insertion point

@@ -4,17 +4,29 @@ import { Category } from "@/types/todo";
 interface CategoryHeaderProps {
   category: Category;
   taskCount?: number;
+  isDropTarget?: boolean;
 }
 
 /**
  * Category section header.
  * Displays category name in bold with a distinct background.
+ * Highlights with primary color when a task is being dragged over this category.
  */
-export function CategoryHeader({ category, taskCount }: CategoryHeaderProps) {
+export function CategoryHeader({
+  category,
+  taskCount,
+  isDropTarget,
+}: CategoryHeaderProps) {
   return (
     <View
-      className="flex-row items-center justify-between py-2.5 px-3 bg-surface-secondary rounded-md mt-4 mb-1"
-      style={category.color ? { backgroundColor: category.color } : undefined}
+      className={`flex-row items-center justify-between py-2.5 px-3 rounded-md mt-4 mb-1 ${
+        isDropTarget ? "bg-primary/15" : "bg-surface-secondary"
+      }`}
+      style={
+        !isDropTarget && category.color
+          ? { backgroundColor: category.color }
+          : undefined
+      }
     >
       <Text className="text-[15px] font-bold text-text uppercase tracking-wide">
         {category.name}
@@ -30,10 +42,23 @@ export function CategoryHeader({ category, taskCount }: CategoryHeaderProps) {
 
 /**
  * Header for the "Uncategorized" section at the bottom.
+ * Highlights with primary color when a task is being dragged over this section.
  */
-export function UncategorizedHeader({ taskCount }: { taskCount?: number }) {
+export function UncategorizedHeader({
+  taskCount,
+  isDropTarget,
+}: {
+  taskCount?: number;
+  isDropTarget?: boolean;
+}) {
   return (
-    <View className="flex-row items-center justify-between py-2.5 px-3 bg-surface rounded-md mt-4 mb-1 border border-dashed border-border">
+    <View
+      className={`flex-row items-center justify-between py-2.5 px-3 rounded-md mt-4 mb-1 ${
+        isDropTarget
+          ? "bg-primary/15"
+          : "bg-surface border border-dashed border-border"
+      }`}
+    >
       <Text className="text-[15px] font-semibold text-text-muted uppercase tracking-wide">
         Uncategorized
       </Text>

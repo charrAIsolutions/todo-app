@@ -66,7 +66,7 @@ export default function ModalScreen() {
 
           <View className="bg-surface-secondary rounded-lg p-4">
             <Text className="text-base text-text mb-2">
-              <Text className="font-semibold">Version:</Text> 0.0.9.2
+              <Text className="font-semibold">Version:</Text> 0.0.9.8
             </Text>
             <Text className="text-base text-text mb-2">
               <Text className="font-semibold">Phase:</Text> 9 - iOS TestFlight

@@ -9,7 +9,7 @@ import { Text } from "react-native";
 import { Category, Task } from "@/types/todo";
 import { CategoryHeader, UncategorizedHeader } from "./CategoryHeader";
 import { TaskItem } from "./TaskItem";
-import { DraggableTask, InlineDropIndicator, useDragContext } from "./drag";
+import { DraggableTask, useDragContext } from "./drag";
 
 interface CategorySectionProps {
   category: Category | null; // null = uncategorized
@@ -19,6 +19,7 @@ interface CategorySectionProps {
   onToggleTask: (taskId: string) => void;
   onPressTask?: (taskId: string) => void;
   dragEnabled?: boolean;
+  showWhenEmpty?: boolean; // Show uncategorized section even when empty (for drag targets)
 }
 
 // Shared entry animation config
@@ -43,6 +44,12 @@ function DraggableCategorySection({
   const activeDropZone = dragState.activeDropZone;
   const categoryId = category?.id ?? null;
 
+  // Highlight category header when a task is being dragged over it
+  const isDropTarget =
+    dragState.isDragging &&
+    activeDropZone?.listId === listId &&
+    activeDropZone?.categoryId === categoryId;
+
   const containerRef = useRef<View>(null);
 
   // Track if initial render is complete to skip entry animations on mount
@@ -64,9 +71,16 @@ function DraggableCategorySection({
     <View ref={containerRef} className="mb-2" onLayout={handleLayout}>
       {/* Category Header */}
       {category ? (
-        <CategoryHeader category={category} taskCount={tasks.length} />
+        <CategoryHeader
+          category={category}
+          taskCount={tasks.length}
+          isDropTarget={isDropTarget}
+        />
       ) : (
-        <UncategorizedHeader taskCount={tasks.length} />
+        <UncategorizedHeader
+          taskCount={tasks.length}
+          isDropTarget={isDropTarget}
+        />
       )}
 
       {/* Tasks */}
@@ -74,11 +88,6 @@ function DraggableCategorySection({
         <View>
           {tasks.map((task, index) => {
             const subtasks = subtasksByParent.get(task.id) ?? [];
-            const showDropBefore =
-              activeDropZone?.listId === listId &&
-              activeDropZone?.categoryId === categoryId &&
-              activeDropZone?.beforeTaskId === task.id &&
-              activeDropZone?.type !== "nest";
 
             return (
               <Animated.View
@@ -86,12 +95,6 @@ function DraggableCategorySection({
                 entering={hasRendered.current ? entryAnimation : undefined}
                 exiting={exitAnimation}
               >
-                {/* Drop indicator before task */}
-                <InlineDropIndicator
-                  active={showDropBefore}
-                  type={activeDropZone?.type ?? "reorder"}
-                />
-
                 {/* Parent Task */}
                 <DraggableTask
                   task={task}
@@ -122,17 +125,6 @@ function DraggableCategorySection({
               </Animated.View>
             );
           })}
-
-          {/* Drop indicator at end of category */}
-          <InlineDropIndicator
-            active={
-              activeDropZone?.listId === listId &&
-              activeDropZone?.categoryId === categoryId &&
-              activeDropZone?.beforeTaskId === null &&
-              activeDropZone?.type !== "nest"
-            }
-            type={activeDropZone?.type ?? "reorder"}
-          />
         </View>
       ) : (
         <View className="h-10 ml-4 border border-dashed border-border rounded-lg bg-surface items-center justify-center">
@@ -237,9 +229,10 @@ export function CategorySection({
   onToggleTask,
   onPressTask,
   dragEnabled = false,
+  showWhenEmpty = false,
 }: CategorySectionProps) {
-  // For uncategorized, only show if there are tasks
-  if (!category && tasks.length === 0) {
+  // For uncategorized, only show if there are tasks (or showWhenEmpty is set)
+  if (!category && tasks.length === 0 && !showWhenEmpty) {
     return null;
   }
 

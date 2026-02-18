@@ -35,7 +35,7 @@ export const DURATION = {
  * Using hex format for interpolateColor compatibility
  */
 export const COLORS = {
-  checkboxUnchecked: "#ffffff",
+  checkboxUnchecked: "transparent",
   checkboxChecked: "#007AFF",
   borderUnchecked: "#cccccc",
   borderChecked: "#007AFF",
