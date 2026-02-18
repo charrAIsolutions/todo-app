@@ -11,6 +11,7 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 
 import { TaskItem } from "@/components/TaskItem";
+import { SPRING } from "@/lib/animations";
 import { useDraggable, useLayoutRegistration } from "./useDragDrop";
 import type { Task } from "@/types";
 
@@ -127,9 +128,15 @@ export function DraggableTask({
       runOnJS(markDragFinished)();
     })
     .onFinalize(() => {
-      // Spring back
-      sharedValues.translateX.value = withSpring(0);
-      sharedValues.translateY.value = withSpring(0);
+      // Snap back with minimal bounce
+      sharedValues.translateX.value = withSpring(0, {
+        damping: 30,
+        stiffness: 300,
+      });
+      sharedValues.translateY.value = withSpring(0, {
+        damping: 30,
+        stiffness: 300,
+      });
       sharedValues.scale.value = withTiming(1);
     });
 

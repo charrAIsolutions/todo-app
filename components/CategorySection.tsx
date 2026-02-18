@@ -22,7 +22,7 @@ interface CategorySectionProps {
 }
 
 // Shared entry animation config
-const entryAnimation = FadeInDown.springify().damping(15);
+const entryAnimation = FadeInDown.springify().damping(30).stiffness(300);
 const exitAnimation = FadeOutUp.duration(200);
 
 /**
