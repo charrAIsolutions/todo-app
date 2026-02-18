@@ -1,6 +1,6 @@
 # Last updated: February 2026
 
-# Version: 0.0.8.6
+# Version: 0.0.9.1
 
 <!-- It is 2026, not 2025 -->
 
@@ -27,7 +27,7 @@ You are a senior React Native developer and mentor. Your student (Charles) is a 
 ## Tech Stack Details
 
 - **Expo SDK**: 54 (managed workflow)
-- **Deployment**: Vercel (static export, auto-deploys on push to main)
+- **Deployment**: Vercel (web), EAS Build + TestFlight (iOS)
 - **Styling**: NativeWind v4 with CSS variables for theming
 - **Animations**: react-native-reanimated (spring-based micro-interactions)
 - **State**: React Context + useReducer (in `store/AppContext.tsx`)
@@ -132,9 +132,16 @@ npx expo start --android # Start Android emulator
 npm run build:web        # Build static web export (output: dist/)
 npm run lint             # Run ESLint
 npm run typecheck        # Run TypeScript compiler check
+
+# EAS Build (iOS)
+eas build --platform ios --profile production    # Production build for TestFlight
+eas build --platform ios --profile development   # Dev client for simulator
+eas submit --platform ios --latest               # Submit latest build to TestFlight
 ```
 
 ## Deployment
+
+### Web (Vercel)
 
 - **Platform**: Vercel (static hosting)
 - **URL**: https://todo-app-ten-blush-46.vercel.app
@@ -143,6 +150,17 @@ npm run typecheck        # Run TypeScript compiler check
 - **Config**: `vercel.json` (rewrites for SPA routing, cache headers for static assets)
 - **Auto-deploy**: Pushes to `main` trigger automatic deployments via GitHub integration
 - **Manual deploy**: Run `vercel --prod` from project root
+
+### iOS (EAS Build + TestFlight)
+
+- **Bundle ID**: `com.charr.todoapp`
+- **Build service**: EAS Build (cloud-based)
+- **Distribution**: TestFlight (internal testing)
+- **Config**: `eas.json` (build profiles: development, preview, production)
+- **Version source**: Remote (EAS manages `buildNumber` auto-increment)
+- **Privacy**: Declares `UserDefaults` access for AsyncStorage (`CA92.1`)
+- **Credentials**: Managed by EAS (Distribution Certificate + Provisioning Profile stored encrypted)
+- **Apple credentials**: Not in repo — set via env vars (`EXPO_APPLE_ID`, `EXPO_APPLE_TEAM_ID`) or interactive prompt
 
 ## Git Workflow
 
@@ -525,9 +543,37 @@ Enables dragging tasks between lists in the web split-view. Also fixed the subta
 - Cross-list nesting (dropping onto a task to make subtask)
 - Mobile cross-list drag
 
+### Phase 9: iOS TestFlight Deployment ✓
+
+Configured EAS Build and deployed to TestFlight for internal testing on physical iPhone.
+
+- `app.json` - Added `bundleIdentifier` (`com.charr.todoapp`), `buildNumber`, `privacyManifests` (UserDefaults for AsyncStorage), synced version to `0.0.8`, added EAS `projectId`
+- `eas.json` - Build profiles (development/preview/production) with `autoIncrement` and `appVersionSource: "remote"`
+- `.gitignore` - Added `credentials.json`, `.eas/`, `.claude/`
+
+**Key decisions:**
+
+- Apple credentials not stored in repo (public repo) — uses env vars or interactive prompts
+- `appVersionSource: "remote"` lets EAS manage build numbers server-side
+- Privacy manifest declares `UserDefaults` access (`CA92.1`) required by Apple since May 2024
+- EAS manages Distribution Certificate and Provisioning Profile (stored encrypted on EAS servers)
+
+**Working:**
+
+- ✅ EAS Build completes successfully in cloud
+- ✅ Build submitted to App Store Connect via `eas submit`
+- ✅ App appears in TestFlight for internal testing
+- ✅ App installs and runs on physical iPhone
+- ✅ No Apple credentials committed to public repo
+
+**Known issues:**
+
+- UI bugs on iOS device (to be investigated in follow-up)
+- App icon is still Expo default (needs custom icon before App Store submission)
+
 ## Current State
 
-**Done (Phases 1-8):**
+**Done (Phases 1-9):**
 
 - Full data model with lists, categories, tasks, subtasks
 - Multi-list tabs with web split-view
@@ -541,19 +587,24 @@ Enables dragging tasks between lists in the web split-view. Also fixed the subta
 - Context-aware empty state messaging with celebration states
 - Cross-list drag-and-drop for web split-view
 - Vercel deployment with auto-deploy on push to main
+- iOS TestFlight deployment via EAS Build
 
 **In Progress:**
 
-- None - all Phase 8 sub-phases complete
+- None
+
+**Known iOS UI bugs:** App runs on device via TestFlight but has UI issues to investigate
 
 **Next (suggested):**
 
-- Phase 9: iOS App Store deployment (EAS Build, app icons, splash screens)
+- Fix iOS UI bugs identified during TestFlight testing
+- Custom app icon (replace Expo default before App Store submission)
+- App Store listing metadata (screenshots, description, keywords)
 - Phase 10: Cloud sync (optional - requires auth)
 
 ## Phases
 
-(Phases 1-8 complete, including 8a-8e sub-phases)
+(Phases 1-9 complete, including 8a-8e sub-phases)
 
 ## Versioning
 
@@ -561,14 +612,14 @@ Format: `Release.PreRelease.Phase.Change`
 
 - **Release** (0): Major release version (0 = pre-release)
 - **PreRelease** (0): Stable pre-release version (0 = unstable)
-- **Phase** (8): Development phase number
-- **Change** (6): Incremental change within phase
+- **Phase** (9): Development phase number
+- **Change** (1): Incremental change within phase
 
-Example: `0.0.8.6` = Release 0, PreRelease 0, Phase 8, Change 6
+Example: `0.0.9.1` = Release 0, PreRelease 0, Phase 9, Change 1
 
 Display title shows full version (0.0.8.6), package.json uses semver (0.0.8).
 
-**Note:** Code version references are behind docs — `app/(tabs)/_layout.tsx` shows 0.0.8.0, `app.json` shows 0.0.7. Update these when deploying.
+**Note:** Code version references may be behind docs — `app/(tabs)/_layout.tsx` shows 0.0.8.0. Update when deploying.
 
 ## Notes
 
