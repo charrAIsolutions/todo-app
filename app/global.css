@@ -17,7 +17,7 @@
   --color-danger: 255 59 48;
 }
 
-.dark {
+.dark:root {
   --color-background: 0 0 0;
   --color-surface: 28 28 30;
   --color-surface-secondary: 44 44 46;

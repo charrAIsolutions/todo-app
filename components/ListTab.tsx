@@ -1,6 +1,7 @@
 import { Pressable, Text, Platform, View } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { useState } from "react";
+import * as Haptics from "expo-haptics";
+import { useCallback, useState } from "react";
 
 interface ListTabProps {
   name: string;
@@ -23,9 +24,19 @@ export function ListTab({
 }: ListTabProps) {
   const [isHovered, setIsHovered] = useState(false);
 
+  const handleLongPress = useCallback(() => {
+    if (!onOpenSettings) return;
+    if (!isWeb) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    onOpenSettings();
+  }, [onOpenSettings]);
+
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onOpenSettings ? handleLongPress : undefined}
+      delayLongPress={300}
       onHoverIn={() => setIsHovered(true)}
       onHoverOut={() => setIsHovered(false)}
       testID={isActive ? "list-tab-active" : "list-tab"}

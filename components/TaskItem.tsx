@@ -11,6 +11,7 @@ import Animated, {
   FadeOut,
 } from "react-native-reanimated";
 import { Task } from "@/types/todo";
+import { useTheme } from "@/hooks/useTheme";
 import { SPRING, DURATION, COLORS } from "@/lib/animations";
 
 interface TaskItemProps {
@@ -31,6 +32,13 @@ export function TaskItem({
   onPress,
   indentLevel = 0,
 }: TaskItemProps) {
+  const { effectiveScheme } = useTheme();
+  const isDark = effectiveScheme === "dark";
+
+  // Theme-aware text colors for interpolateColor (can't use CSS variables)
+  const textActive = isDark ? "#ffffff" : COLORS.textActive;
+  const textCompleted = isDark ? "#636366" : COLORS.textCompleted;
+
   // Calculate margin based on indent level
   const marginStyle =
     indentLevel === 1
@@ -87,7 +95,7 @@ export function TaskItem({
     const color = interpolateColor(
       completionProgress.value,
       [0, 1],
-      [COLORS.textActive, COLORS.textCompleted],
+      [textActive, textCompleted],
     );
     const opacity = 1 - completionProgress.value * 0.4; // 1 → 0.6
 
