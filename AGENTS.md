@@ -5,7 +5,7 @@
 
 ## Quick Reference
 
-- **Version**: 0.0.8.6
+- **Version**: 0.0.9.10
 - **Stack**: Expo 54, React Native, TypeScript, NativeWind v4 (Tailwind CSS)
 - **Styling**: NativeWind v4 with CSS variables for automatic light/dark theming
 - **Animations**: react-native-reanimated (spring-based micro-interactions)
@@ -25,8 +25,9 @@ Format: `Release.PreRelease.Phase.Change`
 
 Update version in:
 
-- `CLAUDE.md` - Header (full: 0.0.8.6)
-- `app/(tabs)/_layout.tsx` - Display title (full: 0.0.8.6)
+- `CLAUDE.md` - Header (full: 0.0.9.10)
+- `app/(tabs)/_layout.tsx` - Display title (currently 0.0.8.0 — needs update)
+- `app/modal.tsx` - About section (currently 0.0.9.9 — needs update)
 - `app.json` - Expo config (semver: 0.0.8)
 - `package.json` - npm version (semver: 0.0.8)
 
@@ -46,10 +47,10 @@ components/
   skeleton/             # Loading skeleton placeholders
   EmptyState.tsx        # Context-aware empty state (full/compact modes)
   ListTabBar.tsx        # List tabs at top
-  ListTab.tsx           # Individual tab
+  ListTab.tsx           # Individual tab (long-press for settings + haptic)
   CategorySection.tsx   # Category header + tasks
   CategoryHeader.tsx    # Bold category header with count
-  TaskItem.tsx          # Task row with checkbox + animations
+  TaskItem.tsx          # Task row with checkbox + theme-aware animated colors
   AddTaskInput.tsx      # New task input with press feedback
 hooks/
   useAppData.ts         # Main data hook (selectors + dispatchers)
@@ -208,9 +209,15 @@ vercel --prod            # Manual deploy to Vercel
 - Test on web first, then mobile
 - No `console.log` in committed code
 
-## Current State (Phase 8 Complete)
+### NativeWind Dark Mode (Important)
 
-All core features implemented through Phase 8 (including sub-phases 8a-8e):
+- Dark mode selector in `app/global.css` must be `.dark:root` (not bare `.dark`)
+- NativeWind's native CSS-to-RN pipeline only recognizes `.dark:root` or `:root[class~="dark"]`
+- `TaskItem.tsx` uses `useTheme()` to swap `interpolateColor` endpoints (can't use CSS vars in Reanimated)
+
+## Current State (Phases 1-9.5 Complete)
+
+All core features implemented through Phase 9.5:
 
 - Multi-list tabs with split-view (web)
 - Categories within lists
@@ -220,14 +227,17 @@ All core features implemented through Phase 8 (including sub-phases 8a-8e):
 - List/category CRUD
 - "Show on open" for web launch
 - UI animations (spring-based micro-interactions)
-- Dark mode with NativeWind v4
+- Dark mode with NativeWind v4 (working on web + native)
 - Loading skeleton UI
 - Context-aware empty state messaging
 - Cross-list drag-and-drop (web split-view)
 - Vercel deployment (auto-deploys on push to main)
+- iOS TestFlight deployment via EAS Build
+- Mobile UI fixes (dark mode native, theme-aware task titles, long-press tabs)
 
 ## Known Issues
 
 - Missing: `useReducedMotion` accessibility hook
 - Suggestion: SPRING type too loose (use `as const satisfies`)
 - Suggestion: Missing accessibility labels on checkbox/row
+- App icon is still Expo default (needs custom icon before App Store submission)

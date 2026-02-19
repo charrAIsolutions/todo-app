@@ -1,6 +1,6 @@
 # Last updated: February 2026
 
-# Version: 0.0.9.9
+# Version: 0.0.9.10
 
 <!-- It is 2026, not 2025 -->
 
@@ -568,12 +568,37 @@ Configured EAS Build and deployed to TestFlight for internal testing on physical
 
 **Known issues:**
 
-- UI bugs on iOS device (to be investigated in follow-up)
 - App icon is still Expo default (needs custom icon before App Store submission)
+
+### Phase 9.5: Mobile UI Fixes ✓
+
+Fixed four mobile-specific UI issues identified during TestFlight testing (PR #12).
+
+- `app/(tabs)/index.tsx` - Added `trackColor` to "Show on Open" Switch, added `flex-1` to text wrapper
+- `app/global.css` - Changed `.dark` to `.dark:root` (NativeWind native pipeline recognition)
+- `components/ListTab.tsx` - Added `onLongPress` with haptic feedback for settings access
+- `components/TaskItem.tsx` - Made `interpolateColor` text endpoints theme-aware via `useTheme()`
+
+**Key insight: `.dark:root` selector**
+
+NativeWind's native CSS-to-RN pipeline (`react-native-css-interop`) only recognizes `.dark:root` or `:root[class~="dark"]` as dark variant selectors. A bare `.dark` selector works on web (DOM class manipulation) but is ignored on native. The navigation bar worked independently because it uses `SemanticColors` from `lib/colors.ts` directly, bypassing NativeWind.
+
+**Key insight: Theme-aware animated colors**
+
+`interpolateColor` in Reanimated requires hardcoded hex values — it can't read NativeWind CSS variables. `TaskItem.tsx` now reads `effectiveScheme` from `useTheme()` and swaps color endpoints: `#ffffff` (white) in dark mode vs `#333333` in light mode.
+
+**Working:**
+
+- ✅ "Show on Open" Switch uses blue track color (matches Settings modal)
+- ✅ Toggle row text wraps properly on narrow screens
+- ✅ Dark mode applies to all NativeWind-styled components on native (not just nav bar)
+- ✅ Task titles readable in both light and dark mode (theme-aware animated colors)
+- ✅ Long-press list tab opens settings with haptic feedback (300ms delay)
+- ✅ Short tap still switches/selects list (no interference)
 
 ## Current State
 
-**Done (Phases 1-9):**
+**Done (Phases 1-9.5):**
 
 - Full data model with lists, categories, tasks, subtasks
 - Multi-list tabs with web split-view
@@ -582,29 +607,27 @@ Configured EAS Build and deployed to TestFlight for internal testing on physical
 - "Show on open" for web launch preferences
 - Local storage persistence
 - UI animations (spring-based micro-interactions via Reanimated)
-- Dark mode with NativeWind v4
+- Dark mode with NativeWind v4 (working on web + native)
 - Loading skeleton UI with synchronized pulse animation
 - Context-aware empty state messaging with celebration states
 - Cross-list drag-and-drop for web split-view
 - Vercel deployment with auto-deploy on push to main
 - iOS TestFlight deployment via EAS Build
+- Mobile UI fixes (dark mode native, Switch color, text overflow, long-press tabs, theme-aware task titles)
 
 **In Progress:**
 
 - None
 
-**Known iOS UI bugs:** App runs on device via TestFlight but has UI issues to investigate
-
 **Next (suggested):**
 
-- Fix iOS UI bugs identified during TestFlight testing
 - Custom app icon (replace Expo default before App Store submission)
 - App Store listing metadata (screenshots, description, keywords)
 - Phase 10: Cloud sync (optional - requires auth)
 
 ## Phases
 
-(Phases 1-9 complete, including 8a-8e sub-phases)
+(Phases 1-9.5 complete, including 8a-8e sub-phases)
 
 ## Versioning
 
@@ -617,9 +640,9 @@ Format: `Release.PreRelease.Phase.Change`
 
 Example: `0.0.9.1` = Release 0, PreRelease 0, Phase 9, Change 1
 
-Display title shows full version (0.0.8.6), package.json uses semver (0.0.8).
+Display title shows full version (0.0.9.10), package.json uses semver (0.0.8).
 
-**Note:** Code version references may be behind docs — `app/(tabs)/_layout.tsx` shows 0.0.8.0. Update when deploying.
+**Note:** Code version references may be behind docs — `app/(tabs)/_layout.tsx` shows 0.0.8.0, `app/modal.tsx` shows 0.0.9.9. Update when deploying.
 
 ## Notes
 
