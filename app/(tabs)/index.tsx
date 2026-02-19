@@ -23,6 +23,40 @@ import type { Task, TodoList } from "@/types/todo";
 import { SkeletonScreen } from "@/components/skeleton";
 
 // ---------------------------------------------------------------------------
+// DragAwareUncategorized - shows uncategorized section as drop target during drag
+// ---------------------------------------------------------------------------
+
+interface DragAwareUncategorizedProps {
+  listId: string;
+  tasks: Task[];
+  subtasksByParent: Map<string, Task[]>;
+  onToggleTask: (taskId: string) => void;
+  onPressTask: (taskId: string) => void;
+}
+
+function DragAwareUncategorized({
+  listId,
+  tasks,
+  subtasksByParent,
+  onToggleTask,
+  onPressTask,
+}: DragAwareUncategorizedProps) {
+  const { dragState } = useDragContext();
+  return (
+    <CategorySection
+      category={null}
+      listId={listId}
+      tasks={tasks}
+      subtasksByParent={subtasksByParent}
+      onToggleTask={onToggleTask}
+      onPressTask={onPressTask}
+      dragEnabled
+      showWhenEmpty={dragState.isDragging}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
 // ListPane Component (web split-view pane with pane layout registration)
 // ---------------------------------------------------------------------------
 
@@ -123,17 +157,13 @@ function ListPane({
           );
         })}
 
-        {listUncategorizedTasks.length > 0 && (
-          <CategorySection
-            category={null}
-            listId={listId}
-            tasks={listUncategorizedTasks}
-            subtasksByParent={listSubtasksByParent}
-            onToggleTask={onToggleTask}
-            onPressTask={onPressTask}
-            dragEnabled
-          />
-        )}
+        <DragAwareUncategorized
+          listId={listId}
+          tasks={listUncategorizedTasks}
+          subtasksByParent={listSubtasksByParent}
+          onToggleTask={onToggleTask}
+          onPressTask={onPressTask}
+        />
 
         {/* Full centered empty state when no categories and no tasks */}
         {!listHasCategories && !listHasTasks && (
@@ -168,6 +198,7 @@ export default function TodoScreen() {
     setActiveList,
     setSelectedLists,
     toggleListSelection,
+    showCompleted,
     addList,
     updateList,
     deleteList,
@@ -180,7 +211,6 @@ export default function TodoScreen() {
     toggleTask,
     moveTask,
     moveTaskToList,
-    nestTask,
   } = useAppData();
 
   const [isCreatingList, setIsCreatingList] = useState(false);
@@ -353,32 +383,6 @@ export default function TodoScreen() {
           break;
         }
 
-        case "nest": {
-          if (dropZone.parentTaskId) {
-            nestTask(task.id, dropZone.parentTaskId);
-          }
-          break;
-        }
-
-        case "unnest": {
-          // First unnest (set parentTaskId to null)
-          nestTask(task.id, null);
-          // Then place in the category the user dropped into
-          const siblingTasks = tasks.filter(
-            (t) =>
-              t.listId === task.listId &&
-              t.categoryId === dropZone.categoryId &&
-              t.parentTaskId === null &&
-              t.id !== task.id,
-          );
-          const newUnnestSortOrder =
-            siblingTasks.length > 0
-              ? Math.max(...siblingTasks.map((t) => t.sortOrder)) + 1
-              : 0;
-          moveTask(task.id, dropZone.categoryId, newUnnestSortOrder);
-          break;
-        }
-
         case "move-list": {
           if (!dropZone.listId) break;
           const targetTasks = tasks.filter(
@@ -424,7 +428,7 @@ export default function TodoScreen() {
         }
       }
     },
-    [tasks, moveTask, moveTaskToList, nestTask, updateTask],
+    [tasks, moveTask, moveTaskToList, updateTask],
   );
 
   // ---------------------------------------------------------------------------
@@ -518,7 +522,11 @@ export default function TodoScreen() {
       const tasksByCategoryMap = new Map<string | null, Task[]>();
       const subtasksByParentMap = new Map<string, Task[]>();
 
-      listTasks.forEach((task) => {
+      const filteredTasks = listTasks.filter(
+        (task) => showCompleted || !task.completed,
+      );
+
+      filteredTasks.forEach((task) => {
         if (task.parentTaskId === null) {
           const key = task.categoryId;
           if (!tasksByCategoryMap.has(key)) {
@@ -548,7 +556,7 @@ export default function TodoScreen() {
     });
 
     return data;
-  }, [tasks]);
+  }, [tasks, showCompleted]);
 
   if (isLoading) {
     return <SkeletonScreen />;
@@ -693,18 +701,14 @@ export default function TodoScreen() {
                     );
                   })}
 
-                  {/* Uncategorized section at bottom */}
-                  {uncategorizedTasks.length > 0 && (
-                    <CategorySection
-                      category={null}
-                      listId={activeListId!}
-                      tasks={uncategorizedTasks}
-                      subtasksByParent={subtasksByParent}
-                      onToggleTask={toggleTask}
-                      onPressTask={handlePressTask}
-                      dragEnabled
-                    />
-                  )}
+                  {/* Uncategorized section at bottom (visible during drag as drop target) */}
+                  <DragAwareUncategorized
+                    listId={activeListId!}
+                    tasks={uncategorizedTasks}
+                    subtasksByParent={subtasksByParent}
+                    onToggleTask={toggleTask}
+                    onPressTask={handlePressTask}
+                  />
 
                   {/* Full centered empty state when no categories and no tasks */}
                   {!hasCategories && !hasAnyTasks && (

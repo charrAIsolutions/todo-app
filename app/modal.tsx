@@ -1,6 +1,14 @@
 import { StatusBar } from "expo-status-bar";
-import { Platform, View, Text, Pressable, ScrollView } from "react-native";
+import {
+  Platform,
+  View,
+  Text,
+  Pressable,
+  ScrollView,
+  Switch,
+} from "react-native";
 import { useTheme } from "@/hooks/useTheme";
+import { useAppData } from "@/hooks/useAppData";
 import type { ThemePreference } from "@/types/theme";
 
 const THEME_OPTIONS: {
@@ -15,6 +23,7 @@ const THEME_OPTIONS: {
 
 export default function ModalScreen() {
   const { preference, setPreference, effectiveScheme } = useTheme();
+  const { showCompleted, setShowCompleted } = useAppData();
 
   return (
     <ScrollView className="flex-1 bg-background">
@@ -58,6 +67,28 @@ export default function ModalScreen() {
           </Text>
         </View>
 
+        {/* Tasks Section */}
+        <View className="mb-8">
+          <Text className="text-[13px] font-semibold text-text-secondary uppercase tracking-wide mb-3">
+            Tasks
+          </Text>
+          <View className="bg-surface-secondary rounded-lg p-4 flex-row items-center justify-between">
+            <View className="flex-1 mr-4">
+              <Text className="text-[15px] font-semibold text-text">
+                Show completed tasks
+              </Text>
+              <Text className="text-xs text-text-muted mt-1">
+                Display tasks that have been checked off
+              </Text>
+            </View>
+            <Switch
+              value={showCompleted}
+              onValueChange={setShowCompleted}
+              trackColor={{ false: "#767577", true: "#3b82f6" }}
+            />
+          </View>
+        </View>
+
         {/* App Info Section */}
         <View className="mb-8">
           <Text className="text-[13px] font-semibold text-text-secondary uppercase tracking-wide mb-3">
@@ -66,7 +97,7 @@ export default function ModalScreen() {
 
           <View className="bg-surface-secondary rounded-lg p-4">
             <Text className="text-base text-text mb-2">
-              <Text className="font-semibold">Version:</Text> 0.0.9.2
+              <Text className="font-semibold">Version:</Text> 0.0.9.9
             </Text>
             <Text className="text-base text-text mb-2">
               <Text className="font-semibold">Phase:</Text> 9 - iOS TestFlight

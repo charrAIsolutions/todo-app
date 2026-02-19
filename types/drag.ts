@@ -35,9 +35,7 @@ export interface DragOrigin {
 export type DropZoneType =
   | "reorder" // Insert between tasks in same category
   | "move-category" // Move to different category
-  | "move-list" // Move to a different list
-  | "nest" // Make subtask of another task
-  | "unnest"; // Convert subtask to top-level task
+  | "move-list"; // Move to a different list
 
 /**
  * A drop zone - the target area where a task can be dropped
@@ -160,10 +158,4 @@ export interface DraggableTaskProps {
   isSubtask: boolean;
   index: number;
   onPress: () => void;
-}
-
-export interface DropIndicatorProps {
-  y: number;
-  visible: boolean;
-  type: DropZoneType;
 }

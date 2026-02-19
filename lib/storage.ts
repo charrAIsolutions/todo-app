@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
   TASKS: "app:tasks",
   ACTIVE_LIST: "app:activeListId",
   THEME_PREFERENCE: "app:themePreference",
+  SHOW_COMPLETED: "app:showCompleted",
   // Legacy key (for migration)
   LEGACY_TODOS: "todos",
 } as const;
@@ -74,6 +75,18 @@ export const storage = {
 
   async setThemePreference(preference: ThemePreference): Promise<void> {
     await AsyncStorage.setItem(STORAGE_KEYS.THEME_PREFERENCE, preference);
+  },
+
+  // ---------------------------------------------------------------------------
+  // Show Completed
+  // ---------------------------------------------------------------------------
+  async getShowCompleted(): Promise<boolean> {
+    const value = await AsyncStorage.getItem(STORAGE_KEYS.SHOW_COMPLETED);
+    return value === "true";
+  },
+
+  async setShowCompleted(show: boolean): Promise<void> {
+    await AsyncStorage.setItem(STORAGE_KEYS.SHOW_COMPLETED, show.toString());
   },
 
   // ---------------------------------------------------------------------------

@@ -18,6 +18,7 @@ interface AppState {
   tasks: Task[];
   activeListId: string | null;
   selectedListIds: string[];
+  showCompleted: boolean;
   isLoading: boolean;
   error: string | null;
 }
@@ -27,6 +28,7 @@ const initialState: AppState = {
   tasks: [],
   activeListId: null,
   selectedListIds: [],
+  showCompleted: false,
   isLoading: true,
   error: null,
 };
@@ -44,9 +46,11 @@ type AppAction =
         tasks: Task[];
         activeListId: string | null;
         selectedListIds: string[];
+        showCompleted: boolean;
       };
     }
   | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_SHOW_COMPLETED"; payload: boolean }
   | { type: "SET_ERROR"; payload: string | null }
 
   // List actions
@@ -127,13 +131,15 @@ function appReducer(state: AppState, action: AppAction): AppState {
     // Hydration & Loading
     // -------------------------------------------------------------------------
     case "HYDRATE": {
-      const { lists, tasks, activeListId, selectedListIds } = action.payload;
+      const { lists, tasks, activeListId, selectedListIds, showCompleted } =
+        action.payload;
       return {
         ...state,
         lists,
         tasks,
         activeListId,
         selectedListIds,
+        showCompleted,
         isLoading: false,
       };
     }
@@ -143,6 +149,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
     case "SET_ERROR":
       return { ...state, error: action.payload };
+
+    case "SET_SHOW_COMPLETED":
+      return { ...state, showCompleted: action.payload };
 
     // -------------------------------------------------------------------------
     // List Actions
