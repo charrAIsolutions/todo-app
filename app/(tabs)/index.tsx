@@ -804,7 +804,7 @@ export default function TodoScreen() {
                 )}
 
                 <View className="py-3 px-4 bg-surface-secondary rounded-lg mb-3 flex-row items-center justify-between gap-4">
-                  <View>
+                  <View className="flex-1 mr-4">
                     <Text className="text-[15px] font-semibold text-text">
                       Show on open
                     </Text>
@@ -818,6 +818,7 @@ export default function TodoScreen() {
                       if (!settingsListId) return;
                       updateList(settingsListId, { showOnOpen: value });
                     }}
+                    trackColor={{ false: "#767577", true: "#3b82f6" }}
                   />
                 </View>
 
