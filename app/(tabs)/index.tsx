@@ -198,6 +198,7 @@ export default function TodoScreen() {
     setActiveList,
     setSelectedLists,
     toggleListSelection,
+    showCompleted,
     addList,
     updateList,
     deleteList,
@@ -521,7 +522,11 @@ export default function TodoScreen() {
       const tasksByCategoryMap = new Map<string | null, Task[]>();
       const subtasksByParentMap = new Map<string, Task[]>();
 
-      listTasks.forEach((task) => {
+      const filteredTasks = listTasks.filter(
+        (task) => showCompleted || !task.completed,
+      );
+
+      filteredTasks.forEach((task) => {
         if (task.parentTaskId === null) {
           const key = task.categoryId;
           if (!tasksByCategoryMap.has(key)) {
@@ -551,7 +556,7 @@ export default function TodoScreen() {
     });
 
     return data;
-  }, [tasks]);
+  }, [tasks, showCompleted]);
 
   if (isLoading) {
     return <SkeletonScreen />;

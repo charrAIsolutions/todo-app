@@ -24,6 +24,7 @@ export function useAppData() {
     async function hydrate() {
       try {
         const { lists, tasks, activeListId } = await loadAppData();
+        const showCompleted = await storage.getShowCompleted();
         const isWeb = Platform.OS === "web";
         const selectedListIds = isWeb
           ? (() => {
@@ -42,7 +43,13 @@ export function useAppData() {
         if (mounted) {
           dispatch({
             type: "HYDRATE",
-            payload: { lists, tasks, activeListId, selectedListIds },
+            payload: {
+              lists,
+              tasks,
+              activeListId,
+              selectedListIds,
+              showCompleted,
+            },
           });
         }
       } catch (error) {
@@ -81,6 +88,12 @@ export function useAppData() {
     storage.setActiveListId(state.activeListId);
   }, [state.activeListId, state.isLoading]);
 
+  // Persist showCompleted preference
+  useEffect(() => {
+    if (state.isLoading) return;
+    storage.setShowCompleted(state.showCompleted);
+  }, [state.showCompleted, state.isLoading]);
+
   // ---------------------------------------------------------------------------
   // Derived Data: Active list
   // ---------------------------------------------------------------------------
@@ -96,7 +109,10 @@ export function useAppData() {
 
     // Get top-level tasks for the active list
     const listTasks = state.tasks.filter(
-      (t) => t.listId === state.activeListId && t.parentTaskId === null,
+      (t) =>
+        t.listId === state.activeListId &&
+        t.parentTaskId === null &&
+        (state.showCompleted || !t.completed),
     );
 
     // Group by categoryId
@@ -116,7 +132,7 @@ export function useAppData() {
     });
 
     return grouped;
-  }, [state.tasks, state.activeListId]);
+  }, [state.tasks, state.activeListId, state.showCompleted]);
 
   // ---------------------------------------------------------------------------
   // Derived Data: Subtasks indexed by parent task ID
@@ -125,7 +141,9 @@ export function useAppData() {
     const map = new Map<string, Task[]>();
 
     state.tasks
-      .filter((t) => t.parentTaskId !== null)
+      .filter(
+        (t) => t.parentTaskId !== null && (state.showCompleted || !t.completed),
+      )
       .forEach((task) => {
         const parentId = task.parentTaskId!;
         if (!map.has(parentId)) {
@@ -140,7 +158,7 @@ export function useAppData() {
     });
 
     return map;
-  }, [state.tasks]);
+  }, [state.tasks, state.showCompleted]);
 
   // ---------------------------------------------------------------------------
   // Action Dispatchers: Lists
@@ -305,6 +323,13 @@ export function useAppData() {
     [dispatch],
   );
 
+  const setShowCompleted = useCallback(
+    (show: boolean) => {
+      dispatch({ type: "SET_SHOW_COMPLETED", payload: show });
+    },
+    [dispatch],
+  );
+
   // ---------------------------------------------------------------------------
   // Return
   // ---------------------------------------------------------------------------
@@ -314,6 +339,7 @@ export function useAppData() {
     tasks: state.tasks,
     activeListId: state.activeListId,
     selectedListIds: state.selectedListIds,
+    showCompleted: state.showCompleted,
     isLoading: state.isLoading,
     error: state.error,
 
@@ -345,5 +371,6 @@ export function useAppData() {
     moveTaskToList,
     nestTask,
     reorderTasks,
+    setShowCompleted,
   };
 }
