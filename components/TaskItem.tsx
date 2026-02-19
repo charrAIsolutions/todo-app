@@ -138,7 +138,7 @@ export function TaskItem({
 
       {/* Title with animated color and opacity */}
       <Animated.Text
-        className={`flex-1 text-[17px] ${task.completed ? "line-through" : ""}`}
+        className={`flex-1 text-base ${task.completed ? "line-through" : ""}`}
         style={titleAnimatedStyle}
         numberOfLines={2}
       >
