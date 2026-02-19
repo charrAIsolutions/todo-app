@@ -30,6 +30,18 @@
             "NSPrivacyAccessedAPITypeReasons": [
               "CA92.1"
             ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
           }
         ]
       },
@@ -62,6 +74,12 @@
       "eas": {
         "projectId": "70545aa3-0ff2-426b-bcc3-bd12bb54aea5"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/70545aa3-0ff2-426b-bcc3-bd12bb54aea5"
     }
   }
 }
