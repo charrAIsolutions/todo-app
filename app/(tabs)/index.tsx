@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useHeaderHeight } from "@react-navigation/elements";
 import { useAppData } from "@/hooks/useAppData";
 import { ListTabBar } from "@/components/ListTabBar";
 import { AddTaskInput } from "@/components/AddTaskInput";
@@ -233,6 +234,7 @@ export default function TodoScreen() {
     null,
   );
   const { width: windowWidth } = useWindowDimensions();
+  const headerHeight = useHeaderHeight();
 
   const settingsList = lists.find((l) => l.id === settingsListId);
   const isWeb = Platform.OS === "web";
@@ -583,6 +585,7 @@ export default function TodoScreen() {
     <KeyboardAvoidingView
       className="flex-1 bg-background"
       behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? headerHeight : 0}
     >
       {/* List Tab Bar */}
       <ListTabBar

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from "react";
-import { View, LayoutChangeEvent, Platform } from "react-native";
+import { View, LayoutChangeEvent, Platform, Keyboard } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
@@ -86,6 +86,7 @@ export function DraggableTask({
   // Helper to activate drag (called when gesture starts after threshold)
   const activateDrag = useCallback(
     (startX: number, startY: number) => {
+      Keyboard.dismiss();
       isDragActiveRef.current = true;
       justDraggedRef.current = true;
       triggerHaptic("start");
@@ -149,6 +150,8 @@ export function DraggableTask({
         transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
         opacity: 1,
         zIndex: 0,
+        shadowOpacity: 0,
+        elevation: 0,
       };
     }
 
