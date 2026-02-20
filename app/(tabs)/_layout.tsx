@@ -44,7 +44,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Tasks - 0.0.9.9",
+          title: "Tasks - 0.0.10.0",
           tabBarIcon: ({ color }) => <TabBarIcon name="list" color={color} />,
           headerRight: () => (
             <Link href="/modal" asChild>
