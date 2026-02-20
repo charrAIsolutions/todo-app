@@ -14,6 +14,7 @@ const STORAGE_KEYS = {
   ACTIVE_LIST: "app:activeListId",
   THEME_PREFERENCE: "app:themePreference",
   SHOW_COMPLETED: "app:showCompleted",
+  HAS_PENDING_SYNC: "app:hasPendingSync",
   // Legacy key (for migration)
   LEGACY_TODOS: "todos",
 } as const;
@@ -90,6 +91,21 @@ export const storage = {
   },
 
   // ---------------------------------------------------------------------------
+  // Pending Sync Flag
+  // ---------------------------------------------------------------------------
+  async getHasPendingSync(): Promise<boolean> {
+    const value = await AsyncStorage.getItem(STORAGE_KEYS.HAS_PENDING_SYNC);
+    return value === "true";
+  },
+
+  async setHasPendingSync(pending: boolean): Promise<void> {
+    await AsyncStorage.setItem(
+      STORAGE_KEYS.HAS_PENDING_SYNC,
+      pending.toString(),
+    );
+  },
+
+  // ---------------------------------------------------------------------------
   // Bulk Operations
   // ---------------------------------------------------------------------------
   async clearAll(): Promise<void> {
@@ -97,6 +113,20 @@ export const storage = {
       STORAGE_KEYS.LISTS,
       STORAGE_KEYS.TASKS,
       STORAGE_KEYS.ACTIVE_LIST,
+    ]);
+  },
+
+  /**
+   * Clear all app data except theme preference (used on sign-out).
+   * Theme is per-device so it stays.
+   */
+  async clearAppData(): Promise<void> {
+    await AsyncStorage.multiRemove([
+      STORAGE_KEYS.LISTS,
+      STORAGE_KEYS.TASKS,
+      STORAGE_KEYS.ACTIVE_LIST,
+      STORAGE_KEYS.SHOW_COMPLETED,
+      STORAGE_KEYS.HAS_PENDING_SYNC,
     ]);
   },
 

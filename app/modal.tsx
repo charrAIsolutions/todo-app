@@ -1,4 +1,5 @@
 import { StatusBar } from "expo-status-bar";
+import { useState } from "react";
 import {
   Platform,
   View,
@@ -6,9 +7,12 @@ import {
   Pressable,
   ScrollView,
   Switch,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useTheme } from "@/hooks/useTheme";
 import { useAppData } from "@/hooks/useAppData";
+import { useAuth } from "@/store/AuthContext";
 import type { ThemePreference } from "@/types/theme";
 
 const THEME_OPTIONS: {
@@ -24,6 +28,32 @@ const THEME_OPTIONS: {
 export default function ModalScreen() {
   const { preference, setPreference, effectiveScheme } = useTheme();
   const { showCompleted, setShowCompleted } = useAppData();
+  const { user, signOut } = useAuth();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const handleSignOut = () => {
+    if (Platform.OS === "web") {
+      if (window.confirm("Are you sure you want to sign out?")) {
+        performSignOut();
+      }
+    } else {
+      Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Sign Out", style: "destructive", onPress: performSignOut },
+      ]);
+    }
+  };
+
+  const performSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut();
+    } catch {
+      // AuthContext handles error logging
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
 
   return (
     <ScrollView className="flex-1 bg-background">
@@ -89,6 +119,34 @@ export default function ModalScreen() {
           </View>
         </View>
 
+        {/* Account Section */}
+        {user && (
+          <View className="mb-8">
+            <Text className="text-[13px] font-semibold text-text-secondary uppercase tracking-wide mb-3">
+              Account
+            </Text>
+            <View className="bg-surface-secondary rounded-lg p-4">
+              <Text className="text-sm text-text-secondary mb-3">
+                Signed in as{" "}
+                <Text className="font-semibold text-text">{user.email}</Text>
+              </Text>
+              <Pressable
+                className={`rounded-lg py-3 items-center ${isSigningOut ? "bg-danger/60" : "bg-danger"}`}
+                onPress={handleSignOut}
+                disabled={isSigningOut}
+              >
+                {isSigningOut ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text className="text-white font-semibold text-sm">
+                    Sign Out
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        )}
+
         {/* App Info Section */}
         <View className="mb-8">
           <Text className="text-[13px] font-semibold text-text-secondary uppercase tracking-wide mb-3">
@@ -97,10 +155,10 @@ export default function ModalScreen() {
 
           <View className="bg-surface-secondary rounded-lg p-4">
             <Text className="text-base text-text mb-2">
-              <Text className="font-semibold">Version:</Text> 0.0.9.9
+              <Text className="font-semibold">Version:</Text> 0.0.10.0
             </Text>
             <Text className="text-base text-text mb-2">
-              <Text className="font-semibold">Phase:</Text> 9 - iOS TestFlight
+              <Text className="font-semibold">Phase:</Text> 10 - Supabase Sync
             </Text>
             <Text className="text-sm text-text-muted mt-2">
               A personal todo app built with React Native, Expo, and NativeWind.

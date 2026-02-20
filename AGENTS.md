@@ -5,12 +5,14 @@
 
 ## Quick Reference
 
-- **Version**: 0.0.9.10
-- **Stack**: Expo 54, React Native, TypeScript, NativeWind v4 (Tailwind CSS)
+- **Version**: 0.0.10.0
+- **Stack**: Expo 54, React Native, TypeScript, NativeWind v4, Supabase (auth + sync)
 - **Styling**: NativeWind v4 with CSS variables for automatic light/dark theming
 - **Animations**: react-native-reanimated (spring-based micro-interactions)
 - **State**: React Context + useReducer (`store/AppContext.tsx`)
-- **Storage**: AsyncStorage (`lib/storage.ts`)
+- **Auth**: Supabase Auth, email/password (`store/AuthContext.tsx`)
+- **Storage**: AsyncStorage (local cache) + Supabase PostgreSQL (cloud sync)
+- **Sync**: Diff-based with debounced persistence, realtime subscriptions (`lib/sync.ts`)
 - **Navigation**: Expo Router (file-based routing)
 - **Theming**: NativeWind + ThemeContext (`store/ThemeContext.tsx`)
 
@@ -25,9 +27,9 @@ Format: `Release.PreRelease.Phase.Change`
 
 Update version in:
 
-- `CLAUDE.md` - Header (full: 0.0.9.10)
-- `app/(tabs)/_layout.tsx` - Display title (currently 0.0.8.0 — needs update)
-- `app/modal.tsx` - About section (currently 0.0.9.9 — needs update)
+- `CLAUDE.md` - Header (full: 0.0.10.0)
+- `app/(tabs)/_layout.tsx` - Display title (0.0.10.0)
+- `app/modal.tsx` - About section (0.0.10.0)
 - `app.json` - Expo config (semver: 0.0.8)
 - `package.json` - npm version (semver: 0.0.8)
 
@@ -35,13 +37,14 @@ Update version in:
 
 ```
 app/                    # Expo Router screens
+  (auth)/               # Auth route group (login/signup)
   (tabs)/               # Tab navigation
     index.tsx           # Main todo screen (lists, tasks, split-view)
     _layout.tsx         # Tab bar config
   task/[id].tsx         # Task detail modal
-  _layout.tsx           # Root layout (providers, splash screen)
+  _layout.tsx           # Root layout (providers, auth redirect, splash screen)
   global.css            # CSS variables for light/dark colors
-  modal.tsx             # Settings screen (theme toggle)
+  modal.tsx             # Settings screen (theme toggle, account, sign-out)
 components/
   drag/                 # Drag-and-drop system (cross-list capable)
   skeleton/             # Loading skeleton placeholders
@@ -53,20 +56,28 @@ components/
   TaskItem.tsx          # Task row with checkbox + theme-aware animated colors
   AddTaskInput.tsx      # New task input with press feedback
 hooks/
-  useAppData.ts         # Main data hook (selectors + dispatchers)
+  useAppData.ts         # Main data hook (selectors, dispatchers, sync, hydration)
+  useRealtimeSync.ts    # Supabase realtime subscriptions with echo prevention
   useTheme.ts           # Theme preference + effective scheme
 store/
   AppContext.tsx        # State context + reducer (15+ actions)
+  AuthContext.tsx       # Auth state (session, signIn/signUp/signOut)
   ThemeContext.tsx      # Theme state (light/dark/system)
 lib/
   animations.ts         # Shared constants (SPRING, DURATION, SKELETON)
   colors.ts             # Semantic color values for React Navigation
-  storage.ts            # AsyncStorage wrappers (includes theme)
+  storage.ts            # AsyncStorage wrappers (theme, pendingSync, clearAppData)
+  supabase.ts           # Supabase client (lazy singleton)
+  supabase-storage.ts   # Supabase CRUD + row transformations
+  sync.ts               # Diff engine, migration, snapshot management
   utils.ts              # General utilities
 types/
+  auth.ts               # AuthContextValue interface
+  supabase.ts           # DB row types (ListRow, CategoryRow, TaskRow)
   todo.ts               # TodoList, Category, Task interfaces
   drag.ts               # Drag-and-drop types (includes PaneLayout)
   theme.ts              # ThemePreference, ColorScheme types
+docs/                   # Planning documents (supabase-plan.md, supabase-plan-review.md)
 planning/               # Implementation plans and reviews
 ```
 
@@ -142,6 +153,23 @@ const { preference, effectiveScheme, setPreference } = useTheme();
 
 **Semantic Color Tokens:** `background`, `surface`, `surface-secondary`, `text`, `text-secondary`, `text-muted`, `border`, `primary`, `success`, `warning`, `danger`, `skeleton`
 
+### Auth
+
+```typescript
+import { useAuth } from "@/store/AuthContext";
+const { session, user, signIn, signUp, signOut } = useAuth();
+// signUp returns "signed_in" | "confirmation_required"
+// signOut uses scope: "local" (won't revoke other devices)
+```
+
+### Supabase Client
+
+```typescript
+import { supabase } from "@/lib/supabase";
+// Lazy singleton — call as function: supabase().auth.xxx, supabase().from("table").xxx
+// NEVER use module-level createClient() (breaks SSR on web)
+```
+
 ### Platform Detection
 
 ```typescript
@@ -205,9 +233,9 @@ vercel --prod            # Manual deploy to Vercel
 
 - No external state libraries (use Context)
 - No over-abstraction
-- No network features (local-first)
 - Test on web first, then mobile
 - No `console.log` in committed code
+- Supabase client must be lazy singleton (`supabase()` function, not module-level)
 
 ### NativeWind Dark Mode (Important)
 
@@ -215,9 +243,9 @@ vercel --prod            # Manual deploy to Vercel
 - NativeWind's native CSS-to-RN pipeline only recognizes `.dark:root` or `:root[class~="dark"]`
 - `TaskItem.tsx` uses `useTheme()` to swap `interpolateColor` endpoints (can't use CSS vars in Reanimated)
 
-## Current State (Phases 1-9.5 Complete)
+## Current State (Phases 1-10 Complete)
 
-All core features implemented through Phase 9.5:
+All core features implemented through Phase 10:
 
 - Multi-list tabs with split-view (web)
 - Categories within lists
@@ -231,12 +259,18 @@ All core features implemented through Phase 9.5:
 - Loading skeleton UI
 - Context-aware empty state messaging
 - Cross-list drag-and-drop (web split-view)
+- Email/password authentication via Supabase Auth
+- Cross-device cloud sync with Supabase Realtime (~2-3s)
+- Offline persistence with foreground retry
 - Vercel deployment (auto-deploys on push to main)
 - iOS TestFlight deployment via EAS Build
 - Mobile UI fixes (dark mode native, theme-aware task titles, long-press tabs)
 
 ## Known Issues
 
+- Supabase SQL schema not yet applied (tables, RLS policies, triggers) — see `docs/supabase-plan.md`
+- Supabase free tier: 3 emails/hour rate limit on auth confirmations
+- Vercel needs Supabase env vars added in dashboard
 - Missing: `useReducedMotion` accessibility hook
 - Suggestion: SPRING type too loose (use `as const satisfies`)
 - Suggestion: Missing accessibility labels on checkbox/row

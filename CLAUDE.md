@@ -1,6 +1,6 @@
 # Last updated: February 2026
 
-# Version: 0.0.9.10
+# Version: 0.0.10.0
 
 <!-- It is 2026, not 2025 -->
 
@@ -10,9 +10,9 @@
 
 Personal to-do application built for learning proper React Native patterns.
 
-- **Stack**: Expo (React Native), TypeScript, NativeWind v4 (Tailwind CSS)
+- **Stack**: Expo (React Native), TypeScript, NativeWind v4 (Tailwind CSS), Supabase (auth + sync)
 - **Platforms**: iOS, Android, Web (single codebase)
-- **User**: Single user (Charles), no auth required initially
+- **User**: Single user (Charles), email/password auth via Supabase
 
 ## Identity
 
@@ -31,7 +31,9 @@ You are a senior React Native developer and mentor. Your student (Charles) is a 
 - **Styling**: NativeWind v4 with CSS variables for theming
 - **Animations**: react-native-reanimated (spring-based micro-interactions)
 - **State**: React Context + useReducer (in `store/AppContext.tsx`)
-- **Storage**: AsyncStorage via `@react-native-async-storage/async-storage`
+- **Storage**: AsyncStorage (local cache) + Supabase PostgreSQL (cloud sync)
+- **Auth**: Supabase Auth (email/password, session persisted in AsyncStorage)
+- **Sync**: Diff-based with debounced persistence, realtime subscriptions, offline retry
 - **Navigation**: Expo Router (file-based routing)
 - **Theming**: NativeWind + ThemeContext for light/dark mode support
 
@@ -39,24 +41,34 @@ You are a senior React Native developer and mentor. Your student (Charles) is a 
 
 ```
 app/                    # Expo Router screens (file-based routing)
+  (auth)/               # Auth route group (login/signup)
   (tabs)/               # Tab navigation group
-  _layout.tsx           # Root layout (wraps with ThemeProvider)
+  _layout.tsx           # Root layout (providers, auth redirect, splash screen)
   global.css            # CSS variables for light/dark colors
 components/             # Reusable UI components
   drag/                 # Drag-and-drop components
   skeleton/             # Loading skeleton placeholders
 hooks/                  # Custom React hooks
+  useAppData.ts         # Main data hook (selectors, dispatchers, sync, hydration)
+  useRealtimeSync.ts    # Supabase realtime subscriptions with echo prevention
   useTheme.ts           # Theme hook for preference & effective scheme
 lib/                    # Utilities, helpers, constants
   animations.ts         # Shared animation constants (SPRING, DURATION, COLORS)
   colors.ts             # Semantic color values for React Navigation compatibility
-  storage.ts            # AsyncStorage wrappers (includes theme preference)
+  storage.ts            # AsyncStorage wrappers (includes theme, pendingSync)
+  supabase.ts           # Supabase client (lazy singleton)
+  supabase-storage.ts   # Supabase CRUD + row transformations
+  sync.ts               # Diff engine, migration, snapshot management
   utils.ts              # General utilities
 store/                  # State management
   AppContext.tsx        # App state (lists, tasks)
+  AuthContext.tsx       # Auth state (session, signIn/signUp/signOut)
   ThemeContext.tsx      # Theme state (light/dark/system)
 types/                  # TypeScript type definitions
+  auth.ts               # AuthContextValue interface
+  supabase.ts           # DB row types (ListRow, CategoryRow, TaskRow)
   theme.ts              # ThemePreference, ColorScheme types
+docs/                   # Planning documents
 planning/               # Implementation plans and reviews
 ```
 
@@ -161,6 +173,8 @@ eas submit --platform ios --latest               # Submit latest build to TestFl
 - **Privacy**: Declares `UserDefaults` access for AsyncStorage (`CA92.1`)
 - **Credentials**: Managed by EAS (Distribution Certificate + Provisioning Profile stored encrypted)
 - **Apple credentials**: Not in repo — set via env vars (`EXPO_APPLE_ID`, `EXPO_APPLE_TEAM_ID`) or interactive prompt
+- **Supabase env vars (EAS)**: Set via `eas env:create --environment production` (EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY)
+- **Supabase env vars (local)**: `.env.local` (gitignored)
 
 ## Git Workflow
 
@@ -235,7 +249,6 @@ interface Task {
 
 - NO external state management libraries until local state proves insufficient
 - NO over-abstraction - premature DRY is the root of complexity
-- NO network features yet - keep it local-first for now
 - Keep dependencies minimal - justify each addition
 
 ## Completed
@@ -596,16 +609,80 @@ NativeWind's native CSS-to-RN pipeline (`react-native-css-interop`) only recogni
 - ✅ Long-press list tab opens settings with haptic feedback (300ms delay)
 - ✅ Short tap still switches/selects list (no interference)
 
+### Phase 10: Supabase Cloud Sync ✓
+
+Email/password auth and cross-device sync via Supabase (PostgreSQL + Realtime).
+
+**New files (10):**
+
+- `lib/supabase.ts` - Lazy singleton Supabase client (avoids SSR `window` error)
+- `lib/supabase-storage.ts` - CRUD operations + row ↔ app state transformations
+- `lib/sync.ts` - Diff engine (`computeDiff`), migration, snapshot management
+- `store/AuthContext.tsx` - Auth provider (session, signIn/signUp/signOut)
+- `hooks/useRealtimeSync.ts` - Realtime subscriptions with echo prevention
+- `app/(auth)/_layout.tsx` - Auth route layout
+- `app/(auth)/login.tsx` - Login/signup screen with email confirmation UX
+- `types/auth.ts` - AuthContextValue interface
+- `types/supabase.ts` - DB row types (ListRow, CategoryRow, TaskRow)
+- `.env.local` - Supabase credentials (gitignored)
+
+**Modified files (7):**
+
+- `hooks/useAppData.ts` - Major rewrite: two-phase hydration, debounced persistence, realtime integration, ref reset on auth boundary, AppState foreground retry
+- `app/_layout.tsx` - AuthProvider in provider tree, route protection (auth redirect), splash gate
+- `app/modal.tsx` - Account section with sign-out button, version bump to 0.0.10.0
+- `lib/storage.ts` - Added `hasPendingSync` flag, `clearAppData()` method
+- `app/(tabs)/_layout.tsx` - Version bump to 0.0.10.0
+- `package.json` - Added @supabase/supabase-js, react-native-url-polyfill
+- `.gitignore` - Added .env.local
+
+**Key architectural decisions:**
+
+- **Lazy singleton**: `supabase()` function (not module-level) avoids SSR `window is not defined` error
+- **Two-phase hydration**: Phase 1 loads AsyncStorage (instant), Phase 2 fetches Supabase (background)
+- **Diff-based sync**: `computeDiff()` on flattened rows, cascade-delete aware, FK-ordered push
+- **Echo prevention**: 2-second timestamp window after push ignores own realtime events
+- **Offline retry**: AppState listener retries pending pushes when app returns to foreground
+- **Auth boundary**: All sync refs (prevSnapshot, isHydrated, timers) reset when userId becomes null
+- **Local sign-out**: `scope: "local"` so signing out on one device doesn't revoke all sessions
+- **Text primary keys**: All Supabase ID columns use `text` (not `uuid`) to match existing `generateId()`
+- **Categories extracted**: In-memory `TodoList.categories[]` stored as separate `categories` table in Supabase
+
+**Working:**
+
+- ✅ Email/password sign-up with email confirmation flow
+- ✅ Sign-in persists session across app restarts
+- ✅ Local data migrates to Supabase on first sign-in
+- ✅ Changes sync across devices in ~2-3 seconds via Realtime
+- ✅ Offline changes persist and sync when connectivity returns
+- ✅ Sign-out clears app data (local scope only, other devices unaffected)
+- ✅ Account section in Settings with email display and sign-out
+- ✅ Route protection: unauthenticated → login screen, authenticated → tabs
+
+**Requires Supabase project setup:**
+
+- SQL schema (tables, RLS policies, triggers) — see `docs/supabase-plan.md` Step 1
+- `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`
+- EAS env vars for mobile builds: `eas env:create --environment production`
+
+**Known issues:**
+
+- Supabase free tier: 3 emails/hour rate limit on auth confirmations
+- `REPLICA IDENTITY FULL` needed on data tables for Realtime filter matching (in SQL schema)
+
 ## Current State
 
-**Done (Phases 1-9.5):**
+**Done (Phases 1-10):**
 
 - Full data model with lists, categories, tasks, subtasks
 - Multi-list tabs with web split-view
 - Drag-and-drop reordering (within and across lists)
 - Task detail modal with all CRUD operations
 - "Show on open" for web launch preferences
-- Local storage persistence
+- Local storage persistence + Supabase cloud sync
+- Email/password authentication with Supabase Auth
+- Cross-device realtime sync via Supabase Realtime
+- Offline support with foreground retry
 - UI animations (spring-based micro-interactions via Reanimated)
 - Dark mode with NativeWind v4 (working on web + native)
 - Loading skeleton UI with synchronized pulse animation
@@ -617,17 +694,19 @@ NativeWind's native CSS-to-RN pipeline (`react-native-css-interop`) only recogni
 
 **In Progress:**
 
-- None
+- None (feat/supabase-sync branch ready for PR/merge)
 
 **Next (suggested):**
 
+- Merge feat/supabase-sync to main
+- Supabase SQL schema setup (RLS policies, tables, triggers) — see `docs/supabase-plan.md` Step 1
+- New EAS Build + TestFlight submission with Supabase env vars
 - Custom app icon (replace Expo default before App Store submission)
 - App Store listing metadata (screenshots, description, keywords)
-- Phase 10: Cloud sync (optional - requires auth)
 
 ## Phases
 
-(Phases 1-9.5 complete, including 8a-8e sub-phases)
+(Phases 1-10 complete, including 8a-8e sub-phases)
 
 ## Versioning
 
@@ -635,14 +714,14 @@ Format: `Release.PreRelease.Phase.Change`
 
 - **Release** (0): Major release version (0 = pre-release)
 - **PreRelease** (0): Stable pre-release version (0 = unstable)
-- **Phase** (9): Development phase number
-- **Change** (1): Incremental change within phase
+- **Phase** (10): Development phase number
+- **Change** (0): Incremental change within phase
 
-Example: `0.0.9.1` = Release 0, PreRelease 0, Phase 9, Change 1
+Example: `0.0.10.0` = Release 0, PreRelease 0, Phase 10, Change 0
 
-Display title shows full version (0.0.9.10), package.json uses semver (0.0.8).
+Display title shows full version (0.0.10.0), package.json uses semver (0.0.8).
 
-**Note:** Code version references may be behind docs — `app/(tabs)/_layout.tsx` shows 0.0.8.0, `app/modal.tsx` shows 0.0.9.9. Update when deploying.
+**Note:** `app/(tabs)/_layout.tsx` and `app/modal.tsx` both show 0.0.10.0.
 
 ## Notes
 
