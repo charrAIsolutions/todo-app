@@ -1,6 +1,6 @@
 # Todo App - Session Handoff
 
-> Last updated: February 2026 | Version: 0.0.9.10
+> Last updated: February 2026 | Version: 0.0.10.0
 
 ## Quick Start
 
@@ -31,6 +31,14 @@ eas build --platform ios --profile production
 eas submit --platform ios --latest
 ```
 
+### Environment Variables
+
+Supabase requires two env vars. These are already configured:
+
+- **Local dev**: `.env.local` (gitignored) — `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- **EAS builds**: Set via `eas env:create --environment production` (already done)
+- **Vercel**: Must be added in Vercel dashboard → Settings → Environment Variables
+
 ## Deployment
 
 ### Web (Vercel)
@@ -50,7 +58,7 @@ eas submit --platform ios --latest
 - **Version source**: Remote (EAS manages `buildNumber` auto-increment)
 - **Credentials**: Managed by EAS (not in repo — uses env vars or interactive prompts)
 
-## What's Built (Phases 1-9.5 Complete)
+## What's Built (Phases 1-10 Complete)
 
 ### Core Features
 
@@ -85,6 +93,17 @@ eas submit --platform ios --latest
 - **Text overflow fix**: `flex-1` on "Show on Open" text wrapper prevents layout overflow
 - **Long-press tabs**: Long-press any list tab to open settings with haptic feedback (300ms delay)
 
+### Phase 10: Supabase Cloud Sync
+
+- **Auth**: Email/password via Supabase Auth with email confirmation flow
+- **Sync**: Diff-based persistence with 500ms debounce, FK-ordered pushes
+- **Realtime**: Cross-device sync in ~2-3 seconds via Supabase Realtime subscriptions
+- **Offline**: `hasPendingSync` dirty flag + AppState foreground retry
+- **Two-phase hydration**: AsyncStorage (instant) → Supabase fetch (background reconciliation)
+- **Migration**: First sign-in migrates existing local data to cloud
+- **Route protection**: Unauthenticated users redirected to login screen
+- **Settings**: Account section with email display and sign-out (local scope only)
+
 ### Platform Support
 
 | Feature                     | Web | iOS | Android |
@@ -98,24 +117,36 @@ eas submit --platform ios --latest
 | Loading skeleton            | Yes | Yes | Yes     |
 | Empty states                | Yes | Yes | Yes     |
 | Long-press tab for settings | Yes | Yes | Yes     |
+| Auth (sign in/up/out)       | Yes | Yes | Yes     |
+| Cloud sync + realtime       | Yes | Yes | Yes     |
+| Offline persistence + retry | Yes | Yes | Yes     |
 
 ## Architecture
 
 ### Key Files
 
 ```
+app/(auth)/login.tsx    # Login/signup screen with email confirmation
+app/(auth)/_layout.tsx  # Auth route layout
 app/(tabs)/index.tsx    # Main screen - list tabs, task display, split-view, ListPane component
 app/task/[id].tsx       # Task detail modal
-app/_layout.tsx         # Root layout (providers, splash screen, GestureHandlerRootView)
+app/_layout.tsx         # Root layout (providers, auth redirect, splash screen)
 app/global.css          # CSS variables for light/dark theming (.dark:root selector)
-app/modal.tsx           # Settings screen (theme toggle, show completed)
+app/modal.tsx           # Settings screen (theme toggle, account section, sign-out)
 store/AppContext.tsx    # State management (Context + useReducer, 15+ actions)
+store/AuthContext.tsx   # Auth state (session, signIn/signUp/signOut)
 store/ThemeContext.tsx  # Theme state (light/dark/system)
-hooks/useAppData.ts     # Data selectors and action dispatchers
+hooks/useAppData.ts     # Data selectors, dispatchers, sync, two-phase hydration
+hooks/useRealtimeSync.ts # Supabase realtime subscriptions with echo prevention
 hooks/useTheme.ts       # Theme preference + effective scheme
+lib/supabase.ts         # Supabase client (lazy singleton — avoids SSR window error)
+lib/supabase-storage.ts # Supabase CRUD + row ↔ app state transformations
+lib/sync.ts             # Diff engine, migration, snapshot management
 lib/animations.ts       # Shared animation constants (SPRING, DURATION, COLORS, SKELETON)
-lib/storage.ts          # AsyncStorage persistence (includes theme)
+lib/storage.ts          # AsyncStorage persistence (theme, pendingSync, clearAppData)
 lib/colors.ts           # Semantic color values for React Navigation
+types/auth.ts           # AuthContextValue interface
+types/supabase.ts       # DB row types (ListRow, CategoryRow, TaskRow)
 components/drag/        # Drag-and-drop system (cross-list capable)
 components/skeleton/    # Loading skeleton components
 components/EmptyState.tsx # Context-aware empty state (full/compact modes)
@@ -126,10 +157,27 @@ components/TaskItem.tsx # Task row with theme-aware animated colors
 ### State Flow
 
 ```
-User Action -> useAppData dispatch -> AppContext reducer -> AsyncStorage
-                                           |
-                              Component re-render <- State update
+User Action -> useAppData dispatch -> AppContext reducer -> AsyncStorage (immediate)
+                                           |                      |
+                              Component re-render         500ms debounce
+                                                               |
+                                                    computeDiff -> pushDiff -> Supabase
+                                                               |
+                                              Realtime subscription <- Other devices
+                                                               |
+                                                    fetchAll -> HYDRATE dispatch
 ```
+
+### Sync Architecture
+
+- **Two-phase hydration**: Phase 1 loads AsyncStorage (instant), Phase 2 fetches Supabase (background)
+- **Debounced persistence**: 500ms debounce batches rapid changes into single Supabase push
+- **Diff-based sync**: `computeDiff()` compares snapshot to current state, generates minimal upserts/deletes
+- **FK-ordered push**: Deletes child→parent (tasks→categories→lists), upserts parent→child
+- **Echo prevention**: 2-second timestamp window after push ignores own realtime events
+- **Offline retry**: AppState listener checks `hasPendingSync` on foreground resume
+- **Auth boundary**: All sync refs reset when userId becomes null (prevents stale snapshot diffs)
+- **Category extraction**: In-memory `categories[]` on TodoList stored as separate table in Supabase
 
 ### Data Model
 
@@ -156,30 +204,33 @@ User Action -> useAppData dispatch -> AppContext reducer -> AsyncStorage
 
 ## Known Issues
 
-### Resolved (this session)
+### Resolved (Phase 10 session)
 
-- ~~Dark mode not applying on native~~ (Fixed: `.dark` → `.dark:root` in global.css)
-- ~~Task titles unreadable in dark mode~~ (Fixed: theme-aware `interpolateColor` endpoints)
-- ~~Switch track color inconsistent~~ (Fixed: added `trackColor` prop)
-- ~~"Show on Open" text overflow~~ (Fixed: added `flex-1` to wrapper)
-- ~~No easy way to access list settings on mobile~~ (Fixed: long-press with haptic)
+- ~~SSR `window is not defined`~~ (Fixed: lazy singleton `supabase()` function)
+- ~~Sign-up silent failure~~ (Fixed: email confirmation message + mode switch)
+- ~~Cross-device sign-out~~ (Fixed: `scope: "local"` in signOut)
+- ~~Data loss on re-login~~ (Fixed: sync ref reset on auth boundary)
+- ~~Offline sync not working~~ (Fixed: AppState foreground retry + hasPendingSync flag)
+- ~~FK race in pushDiff~~ (Fixed: sequential phases instead of Promise.all)
 
 ### Open
 
+- **Supabase schema**: SQL tables, RLS policies, triggers not yet applied — see `docs/supabase-plan.md` Step 1
+- **Supabase Realtime**: `REPLICA IDENTITY FULL` needed on data tables for filter matching
+- **Supabase free tier**: 3 emails/hour rate limit on auth confirmation emails
+- **Vercel env vars**: `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` need to be added in Vercel dashboard
 - **Accessibility**: `useReducedMotion` hook not implemented (Warning)
 - **Accessibility**: Missing accessibility labels on checkbox/row (Suggestion)
 - **Code Quality**: SPRING type too loose — should use `as const satisfies` (Suggestion)
 - **Cosmetic**: Line ending warnings on Windows (LF to CRLF) — harmless
 - **App Icon**: Still Expo default — needs custom icon before App Store submission
 
-### Version Drift
+### Version Status
 
-Code version references are behind docs:
-
-- `app/(tabs)/_layout.tsx` shows 0.0.8.0 (should be 0.0.9.10)
-- `app/modal.tsx` shows 0.0.9.9 (should be 0.0.9.10)
-- `app.json` shows 0.0.8 (correct for semver)
-- `package.json` shows 0.0.8 (correct for semver)
+- `app/(tabs)/_layout.tsx` shows 0.0.10.0
+- `app/modal.tsx` shows 0.0.10.0
+- `app.json` shows 0.0.8 (semver — update when deploying)
+- `package.json` shows 0.0.8 (semver — update when deploying)
 
 ## Testing Checklist
 
@@ -249,6 +300,26 @@ Code version references are behind docs:
 - [ ] Short tap still switches list (no interference with long-press)
 - [ ] Ellipsis icon still visible and tappable
 
+### Auth & Sign-in
+
+- [ ] Sign-up with email sends confirmation email
+- [ ] Confirmation message displayed after sign-up
+- [ ] Sign-in works after email confirmed
+- [ ] Session persists across app restarts
+- [ ] Unauthenticated users see login screen (route protection)
+
+### Cloud Sync
+
+- [ ] Changes sync to other devices in ~2-3 seconds
+- [ ] Add task on device A appears on device B
+- [ ] Delete task on device A removed from device B
+- [ ] Offline changes sync when connectivity returns
+- [ ] App foreground triggers pending sync retry
+- [ ] First sign-in migrates local data to cloud
+- [ ] Sign-out clears local app data
+- [ ] Sign-out on device A does NOT sign out device B (local scope)
+- [ ] Re-login after sign-out shows cloud data (no data loss)
+
 ### Loading & Empty States
 
 - [ ] Skeleton appears during initial load (no blank flash)
@@ -260,23 +331,24 @@ Code version references are behind docs:
 
 ## Recommended Next Steps
 
-### Priority 1: App Store Preparation
+### Priority 1: Merge & Deploy Phase 10
+
+- Merge `feat/supabase-sync` branch to main (create PR)
+- Add Supabase env vars to Vercel dashboard
+- New EAS Build + TestFlight submission with Supabase env vars
+- Verify Supabase SQL schema is applied (tables, RLS policies, triggers — `docs/supabase-plan.md` Step 1)
+
+### Priority 2: App Store Preparation
 
 - Custom app icon (replace Expo default)
 - App Store listing metadata (screenshots, description, keywords)
-- Update version numbers across codebase (resolve version drift)
+- Update semver in app.json/package.json when deploying
 
-### Priority 2: Accessibility Polish
+### Priority 3: Accessibility Polish
 
 - Implement `useReducedMotion` hook
 - Add accessibility labels to checkbox/row
 - Fix SPRING type safety (`as const satisfies`)
-
-### Priority 3: Cloud Sync (Phase 10 - Optional)
-
-- Add authentication (likely Supabase or Firebase)
-- Sync data across devices
-- Conflict resolution strategy
 
 ## Planning Documents
 
@@ -290,9 +362,14 @@ Implementation plans and reviews in `planning/`:
 - `ui-cleanup-plan-review.md` - Phase 9.5 plan review
 - `ui-cleanup-plan-review2.md` - Phase 9.5 second review (edge cases)
 
+Supabase integration plans in `docs/`:
+
+- `supabase-plan.md` - Phase 10 full implementation plan (Revision 2, 7 steps)
+- `supabase-plan-review.md` - Staff engineer review (3 critical, 6 warnings, 3 questions — all addressed)
+
 ## Branch Status
 
-- **Current branch**: `main`
-- **Last merge**: `fix: mobile UI issues from TestFlight testing (#12)` (squash-merged)
-
-All changes committed and merged. Ready for App Store preparation.
+- **Current branch**: `feat/supabase-sync`
+- **Last commit**: `aedbe2c feat: add Supabase integration with auth, sync, and realtime (Phase 10)`
+- **Working tree**: Clean
+- **Action needed**: Create PR and merge to main
