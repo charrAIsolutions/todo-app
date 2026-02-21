@@ -32,6 +32,7 @@ interface DragSharedValues {
   translateX: SharedValue<number>;
   translateY: SharedValue<number>;
   isDragging: SharedValue<boolean>;
+  draggedTaskId: SharedValue<string | null>;
   scale: SharedValue<number>;
 }
 
@@ -68,6 +69,7 @@ export function DragProvider({
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const isDraggingShared = useSharedValue(false);
+  const draggedTaskId = useSharedValue<string | null>(null);
   const scale = useSharedValue(1);
 
   // Refs for values that must be readable during an active gesture
@@ -102,9 +104,10 @@ export function DragProvider({
       });
 
       isDraggingShared.value = true;
+      draggedTaskId.value = task.id;
       scale.value = 1.05;
     },
-    [enabled, isDraggingShared, scale],
+    [enabled, isDraggingShared, draggedTaskId, scale],
   );
 
   // Track active drop zone in a ref to avoid unnecessary re-renders
@@ -166,7 +169,8 @@ export function DragProvider({
     });
 
     isDraggingShared.value = false;
-  }, [onDragEnd, isDraggingShared]);
+    draggedTaskId.value = null;
+  }, [onDragEnd, isDraggingShared, draggedTaskId]);
 
   // Cancel drag (no valid drop zone)
   // Note: Shared values reset by DraggableTask.onFinalize
@@ -184,7 +188,8 @@ export function DragProvider({
     });
 
     isDraggingShared.value = false;
-  }, [isDraggingShared]);
+    draggedTaskId.value = null;
+  }, [isDraggingShared, draggedTaskId]);
 
   // Layout registration
   const registerTaskLayout = useCallback((layout: TaskLayout) => {
@@ -248,9 +253,10 @@ export function DragProvider({
       translateX,
       translateY,
       isDragging: isDraggingShared,
+      draggedTaskId,
       scale,
     }),
-    [translateX, translateY, isDraggingShared, scale],
+    [translateX, translateY, isDraggingShared, draggedTaskId, scale],
   );
 
   return (
