@@ -142,10 +142,15 @@ export function DraggableTask({
     });
 
   // Animated styles for the dragged item
-  // isDragged is task-specific (checks dragState.draggedTask?.id === task.id)
-  // Keep using StyleSheet for animated styles (Reanimated requirement)
+  // Uses shared values (isDragging + draggedTaskId) instead of JS booleans
+  // so the UI thread reacts immediately when drag ends — no stale closure delay.
+  const taskId = task.id;
   const animatedStyle = useAnimatedStyle(() => {
-    if (!isDragged) {
+    const isActive =
+      sharedValues.isDragging.value &&
+      sharedValues.draggedTaskId.value === taskId;
+
+    if (!isActive) {
       return {
         transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }],
         opacity: 1,
@@ -169,12 +174,15 @@ export function DraggableTask({
       shadowRadius: 8,
       elevation: 8,
     };
-  }, [isDragged]);
+  });
 
   // Style for placeholder when item is being dragged
   const placeholderStyle = useAnimatedStyle(() => {
-    return { opacity: isDragged ? 0.3 : 1 };
-  }, [isDragged]);
+    const isActive =
+      sharedValues.isDragging.value &&
+      sharedValues.draggedTaskId.value === taskId;
+    return { opacity: isActive ? 0.3 : 1 };
+  });
 
   return (
     <View ref={viewRef} onLayout={handleLayout}>
