@@ -66,6 +66,7 @@ type AppAction =
       };
     }
   | { type: "DELETE_LIST"; payload: string }
+  | { type: "REORDER_LISTS"; payload: { listIds: string[] } }
 
   // Category actions
   | {
@@ -246,6 +247,20 @@ function appReducer(state: AppState, action: AppAction): AppState {
               : null
             : state.activeListId,
         selectedListIds: nextSelected,
+      };
+    }
+
+    case "REORDER_LISTS": {
+      const { listIds } = action.payload;
+      const orderMap = new Map(listIds.map((id, index) => [id, index]));
+      return {
+        ...state,
+        lists: state.lists.map((list) => {
+          const newOrder = orderMap.get(list.id);
+          return newOrder !== undefined
+            ? { ...list, sortOrder: newOrder }
+            : list;
+        }),
       };
     }
 

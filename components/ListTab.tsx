@@ -1,48 +1,38 @@
 import { Pressable, Text, Platform, View } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import * as Haptics from "expo-haptics";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 interface ListTabProps {
   name: string;
   isActive: boolean;
-  onPress: () => void;
+  isDragged?: boolean;
   onOpenSettings?: () => void;
 }
 
 const isWeb = Platform.OS === "web";
 
 /**
- * Individual tab button for a todo list.
- * Active state shows with different background/text color.
+ * Pure visual component for a todo list tab.
+ * Gestures (tap, double-tap, drag) are handled by the wrapping DraggableTab.
+ * Only the ellipsis button retains its own onPress for settings access.
  */
 export function ListTab({
   name,
   isActive,
-  onPress,
+  isDragged = false,
   onOpenSettings,
 }: ListTabProps) {
   const [isHovered, setIsHovered] = useState(false);
 
-  const handleLongPress = useCallback(() => {
-    if (!onOpenSettings) return;
-    if (!isWeb) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
-    onOpenSettings();
-  }, [onOpenSettings]);
-
   return (
-    <Pressable
-      onPress={onPress}
-      onLongPress={onOpenSettings ? handleLongPress : undefined}
-      delayLongPress={300}
-      onHoverIn={() => setIsHovered(true)}
-      onHoverOut={() => setIsHovered(false)}
+    <View
+      onPointerEnter={isWeb ? () => setIsHovered(true) : undefined}
+      onPointerLeave={isWeb ? () => setIsHovered(false) : undefined}
       testID={isActive ? "list-tab-active" : "list-tab"}
       className={`px-4 py-2.5 mr-1 rounded-lg ${
-        isActive ? "bg-primary" : "bg-transparent active:opacity-70"
+        isActive ? "bg-primary" : isDragged ? "bg-border" : "bg-transparent"
       }`}
+      style={undefined}
     >
       <View className="flex-row items-center gap-2">
         <Text
@@ -55,7 +45,7 @@ export function ListTab({
         </Text>
         {onOpenSettings && (
           <Pressable
-            onHoverIn={() => setIsHovered(true)}
+            onPointerEnter={isWeb ? () => setIsHovered(true) : undefined}
             onPress={(event) => {
               event?.stopPropagation?.();
               onOpenSettings();
@@ -73,6 +63,6 @@ export function ListTab({
           </Pressable>
         )}
       </View>
-    </Pressable>
+    </View>
   );
 }

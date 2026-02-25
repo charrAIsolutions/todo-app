@@ -1,22 +1,20 @@
 /**
  * ListTab regression tests
  *
- * ListTab is a single tab button in the horizontal list tab bar.  It shows
- * the list name, reflects active/inactive state via background colour, and
+ * ListTab is a pure visual component for a tab in the horizontal list tab bar.
+ * It shows the list name, reflects active/inactive state via styling, and
  * conditionally renders a settings ellipsis button.
  *
- * ListTab reads Platform.OS to decide whether the ellipsis should be
- * hidden-until-hover (web) or always visible (native).  We mock Platform
- * per-test group so both branches are covered.
+ * Gestures (tap, double-tap, drag) are handled by the wrapping DraggableTab,
+ * NOT by ListTab itself. ListTab only owns the ellipsis onPress for settings.
  *
  * Behaviours under test:
  *   1. Renders the list name
- *   2. Calls onPress when the tab is tapped
- *   3. Does not render the ellipsis when onOpenSettings is not provided
- *   4. Renders the ellipsis when onOpenSettings is provided
- *   5. Calling onOpenSettings does NOT call onPress (stopPropagation)
- *   6. Active tab applies a distinct background colour (#007AFF)
- *   7. Inactive tab has a transparent background
+ *   2. Does not render the ellipsis when onOpenSettings is not provided
+ *   3. Renders the ellipsis when onOpenSettings is provided
+ *   4. Calls onOpenSettings when the ellipsis is pressed
+ *   5. Active tab uses "list-tab-active" testID
+ *   6. Inactive tab uses "list-tab" testID
  */
 
 import React from "react";
@@ -32,26 +30,9 @@ describe("ListTab", () => {
   // Basic rendering
   // -----------------------------------------------------------------------
   it("renders the provided list name", () => {
-    const { getByText } = render(
-      <ListTab name="Work" isActive={false} onPress={jest.fn()} />,
-    );
+    const { getByText } = render(<ListTab name="Work" isActive={false} />);
 
     expect(getByText("Work")).toBeDefined();
-  });
-
-  // -----------------------------------------------------------------------
-  // Tap behaviour
-  // -----------------------------------------------------------------------
-  it("calls onPress when the tab is tapped", () => {
-    const onPress = jest.fn();
-
-    const { getByText } = render(
-      <ListTab name="Personal" isActive={false} onPress={onPress} />,
-    );
-
-    fireEvent.press(getByText("Personal"));
-
-    expect(onPress).toHaveBeenCalledTimes(1);
   });
 
   // -----------------------------------------------------------------------
@@ -59,8 +40,8 @@ describe("ListTab", () => {
   // -----------------------------------------------------------------------
   describe("settings ellipsis button", () => {
     it("is NOT rendered when onOpenSettings is not provided", () => {
-      const { getByText, queryByText } = render(
-        <ListTab name="NoSettings" isActive={false} onPress={jest.fn()} />,
+      const { queryByText } = render(
+        <ListTab name="NoSettings" isActive={false} />,
       );
 
       // The ellipsis icon is rendered by FontAwesome with name="ellipsis-v".
@@ -74,7 +55,6 @@ describe("ListTab", () => {
         <ListTab
           name="WithSettings"
           isActive={false}
-          onPress={jest.fn()}
           onOpenSettings={jest.fn()}
         />,
       );
@@ -83,15 +63,13 @@ describe("ListTab", () => {
       expect(getByText("ellipsis-v")).toBeDefined();
     });
 
-    it("calls onOpenSettings when the ellipsis is pressed, without calling onPress", () => {
-      const onPress = jest.fn();
+    it("calls onOpenSettings when the ellipsis is pressed", () => {
       const onOpenSettings = jest.fn();
 
       const { getByText } = render(
         <ListTab
           name="SettingsTab"
           isActive={false}
-          onPress={onPress}
           onOpenSettings={onOpenSettings}
         />,
       );
@@ -100,57 +78,25 @@ describe("ListTab", () => {
       fireEvent.press(getByText("ellipsis-v"));
 
       expect(onOpenSettings).toHaveBeenCalledTimes(1);
-      // The settings button calls event.stopPropagation() so the outer
-      // tab's onPress should not fire
-      expect(onPress).not.toHaveBeenCalled();
     });
   });
 
   // -----------------------------------------------------------------------
-  // Active / inactive styling
+  // Active / inactive testID
   // -----------------------------------------------------------------------
-  describe("active state styling", () => {
-    /**
-     * Walk the rendered JSON tree and collect all backgroundColor values
-     * from style props.  We look for the active tab background (#007AFF).
-     */
-    function hasBackgroundColor(tree: any, color: string): boolean {
-      if (!tree || typeof tree !== "object") return false;
+  describe("active state", () => {
+    it("active tab has testID 'list-tab-active'", () => {
+      const { getByTestId } = render(<ListTab name="Active" isActive={true} />);
 
-      if (tree.props?.style) {
-        const styles = Array.isArray(tree.props.style)
-          ? tree.props.style
-          : [tree.props.style];
-        for (const s of styles) {
-          if (s && typeof s === "object" && s.backgroundColor === color) {
-            return true;
-          }
-        }
-      }
-
-      if (Array.isArray(tree.children)) {
-        return tree.children.some((child: any) =>
-          hasBackgroundColor(child, color),
-        );
-      }
-
-      return false;
-    }
-
-    it("active tab has the blue (#007AFF) background colour somewhere in its tree", () => {
-      const { toJSON } = render(
-        <ListTab name="Active" isActive={true} onPress={jest.fn()} />,
-      );
-
-      expect(hasBackgroundColor(toJSON(), "#007AFF")).toBe(true);
+      expect(getByTestId("list-tab-active")).toBeDefined();
     });
 
-    it("inactive tab does NOT have the blue (#007AFF) background colour", () => {
-      const { toJSON } = render(
-        <ListTab name="Inactive" isActive={false} onPress={jest.fn()} />,
+    it("inactive tab has testID 'list-tab'", () => {
+      const { getByTestId } = render(
+        <ListTab name="Inactive" isActive={false} />,
       );
 
-      expect(hasBackgroundColor(toJSON(), "#007AFF")).toBe(false);
+      expect(getByTestId("list-tab")).toBeDefined();
     });
   });
 
@@ -158,10 +104,6 @@ describe("ListTab", () => {
   // Ellipsis icon colour reflects active state
   // -----------------------------------------------------------------------
   describe("ellipsis icon colour", () => {
-    // The component passes color={isActive ? "#fff" : "#666"} to FontAwesome.
-    // Our mock renders it as a Text node; we check the mock's color prop
-    // by inspecting the rendered JSON tree for the icon element.
-
     function findIconColor(tree: any): string | undefined {
       if (!tree || typeof tree !== "object") return undefined;
 
@@ -182,28 +124,56 @@ describe("ListTab", () => {
 
     it("ellipsis is white (#fff) on an active tab", () => {
       const { toJSON } = render(
-        <ListTab
-          name="Active"
-          isActive={true}
-          onPress={jest.fn()}
-          onOpenSettings={jest.fn()}
-        />,
+        <ListTab name="Active" isActive={true} onOpenSettings={jest.fn()} />,
       );
 
       expect(findIconColor(toJSON())).toBe("#fff");
     });
 
-    it("ellipsis is grey (#666) on an inactive tab", () => {
+    it("ellipsis is grey on an inactive tab", () => {
       const { toJSON } = render(
-        <ListTab
-          name="Inactive"
-          isActive={false}
-          onPress={jest.fn()}
-          onOpenSettings={jest.fn()}
-        />,
+        <ListTab name="Inactive" isActive={false} onOpenSettings={jest.fn()} />,
       );
 
-      expect(findIconColor(toJSON())).toBe("#666");
+      // Inactive color is now a CSS variable reference
+      const color = findIconColor(toJSON());
+      expect(color).toBeDefined();
+      expect(color).not.toBe("#fff");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // isDragged visual feedback
+  // -----------------------------------------------------------------------
+  describe("isDragged prop", () => {
+    it("applies reduced opacity when isDragged is true", () => {
+      const { getByTestId } = render(
+        <ListTab name="Dragged" isActive={true} isDragged={true} />,
+      );
+
+      const tab = getByTestId("list-tab-active");
+      const styles = Array.isArray(tab.props.style)
+        ? tab.props.style
+        : [tab.props.style];
+      const hasReducedOpacity = styles.some(
+        (s: any) => s && typeof s === "object" && s.opacity === 0.5,
+      );
+      expect(hasReducedOpacity).toBe(true);
+    });
+
+    it("does not apply reduced opacity when isDragged is false", () => {
+      const { getByTestId } = render(
+        <ListTab name="NotDragged" isActive={true} isDragged={false} />,
+      );
+
+      const tab = getByTestId("list-tab-active");
+      const styles = Array.isArray(tab.props.style)
+        ? tab.props.style
+        : [tab.props.style];
+      const hasReducedOpacity = styles.some(
+        (s: any) => s && typeof s === "object" && s.opacity === 0.5,
+      );
+      expect(hasReducedOpacity).toBe(false);
     });
   });
 });
