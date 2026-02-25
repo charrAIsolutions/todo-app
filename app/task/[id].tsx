@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -31,6 +31,9 @@ export default function TaskDetailScreen() {
     setActiveList,
     nestTask,
     reorderTasks,
+    moveTaskToList,
+    selectedListIds,
+    setSelectedLists,
   } = useAppData();
 
   // Find the task and its list (not activeList - the task's actual list)
@@ -53,13 +56,15 @@ export default function TaskDetailScreen() {
     }
   }, [task]);
 
-  // Set active list to task's list when viewing this screen
-  // This ensures going back lands on the correct list
+  // On mobile, set active list to the task's original list so navigating back
+  // lands on the correct list. On web, skip — the split-view manages its own
+  // selectedListIds and setActiveList would overwrite them to a single list.
+  const originalListId = useRef(task?.listId);
   useEffect(() => {
-    if (task?.listId) {
-      setActiveList(task.listId);
+    if (Platform.OS !== "web" && originalListId.current) {
+      setActiveList(originalListId.current);
     }
-  }, [task?.listId, setActiveList]);
+  }, [setActiveList]);
 
   // ---------------------------------------------------------------------------
   // Position: Sibling tasks for reordering
@@ -114,6 +119,14 @@ export default function TaskDetailScreen() {
   }, [tasks, task]);
 
   const isSubtask = task?.parentTaskId !== null;
+
+  // Other lists for "Move to List" section
+  const otherLists = useMemo(() => {
+    if (!task) return [];
+    return lists
+      .filter((l) => l.id !== task.listId)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [lists, task]);
 
   if (!task) {
     return (
@@ -236,6 +249,34 @@ export default function TaskDetailScreen() {
     nestTask(task.id, null);
   };
 
+  const handleMoveToList = (targetListId: string) => {
+    if (!targetListId || targetListId === task.listId) return;
+    const targetExists = lists.some((l) => l.id === targetListId);
+    if (!targetExists) return;
+    // Place at top of uncategorized: find lowest existing sortOrder and go below it
+    const uncategorizedInTarget = tasks.filter(
+      (t) =>
+        t.listId === targetListId &&
+        t.categoryId === null &&
+        t.parentTaskId === null,
+    );
+    const minSort =
+      uncategorizedInTarget.length > 0
+        ? Math.min(...uncategorizedInTarget.map((t) => t.sortOrder))
+        : 0;
+    moveTaskToList(task.id, targetListId, null, minSort - 1);
+    if (Platform.OS === "web") {
+      // Web split-view: ensure destination list is visible
+      if (!selectedListIds.includes(targetListId)) {
+        setSelectedLists([...selectedListIds, targetListId]);
+      }
+    } else {
+      // Mobile: switch to destination list so user sees where the task landed
+      setActiveList(targetListId);
+    }
+    router.back();
+  };
+
   return (
     <>
       <Stack.Screen
@@ -330,6 +371,35 @@ export default function TaskDetailScreen() {
             ))}
           </View>
         </View>
+
+        {/* Move to List - only for top-level tasks with other lists available */}
+        {!isSubtask && otherLists.length > 0 && (
+          <View className="mb-6">
+            <Text className="text-[13px] font-semibold text-text-secondary uppercase tracking-wide mb-2">
+              Move to List
+            </Text>
+            {otherLists.map((list) => (
+              <Pressable
+                key={list.id}
+                className="flex-row items-center p-3 bg-surface-secondary rounded-lg mb-1.5"
+                onPress={() => handleMoveToList(list.id)}
+              >
+                <FontAwesome
+                  name="arrow-right"
+                  size={14}
+                  color="rgb(var(--color-text-secondary))"
+                  style={{ marginRight: 10 }}
+                />
+                <Text
+                  className="flex-1 text-[15px] text-text"
+                  numberOfLines={1}
+                >
+                  {list.name}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
 
         {/* Position - only show if more than one sibling */}
         {siblingTasks.length > 1 && (

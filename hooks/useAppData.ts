@@ -50,8 +50,10 @@ export function useAppData() {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
       }
+      // Reset loading so re-hydration runs on next sign-in
+      dispatch({ type: "SET_LOADING", payload: true });
     }
-  }, [userId]);
+  }, [userId, dispatch]);
 
   // ---------------------------------------------------------------------------
   // Phase 1: Load from AsyncStorage (instant, app usable immediately)
@@ -61,6 +63,11 @@ export function useAppData() {
     let mounted = true;
 
     async function hydrate() {
+      // Skip if app is already loaded. Prevents re-hydration when new components
+      // mount with useAppData (e.g., task detail modal), which would recompute
+      // selectedListIds from showOnOpen and overwrite user's manual selections.
+      if (!state.isLoading) return;
+
       try {
         // Phase 1: Local cache
         const { lists, tasks, activeListId } = await loadAppData();
