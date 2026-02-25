@@ -521,6 +521,13 @@ export function useAppData() {
     [dispatch],
   );
 
+  const reorderLists = useCallback(
+    (listIds: string[]) => {
+      dispatch({ type: "REORDER_LISTS", payload: { listIds } });
+    },
+    [dispatch],
+  );
+
   // ---------------------------------------------------------------------------
   // Action Dispatchers: Categories
   // ---------------------------------------------------------------------------
@@ -671,6 +678,7 @@ export function useAppData() {
     addList,
     updateList,
     deleteList,
+    reorderLists,
 
     // Category actions
     addCategory,

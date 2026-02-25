@@ -212,6 +212,7 @@ export default function TodoScreen() {
     toggleTask,
     moveTask,
     moveTaskToList,
+    reorderLists,
   } = useAppData();
 
   const [isCreatingList, setIsCreatingList] = useState(false);
@@ -489,6 +490,44 @@ export default function TodoScreen() {
     reorderCategories(settingsListId, newOrder);
   };
 
+  // ---------------------------------------------------------------------------
+  // List Reorder Handlers (accessibility fallback)
+  // ---------------------------------------------------------------------------
+  const sortedListsForSettings = [...lists].sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
+  const settingsListIndex = settingsListId
+    ? sortedListsForSettings.findIndex((l) => l.id === settingsListId)
+    : -1;
+  const isSettingsListFirst = settingsListIndex === 0;
+  const isSettingsListLast =
+    settingsListIndex === sortedListsForSettings.length - 1;
+
+  const handleMoveListUp = () => {
+    if (!settingsListId || settingsListIndex <= 0) return;
+    const newOrder = sortedListsForSettings.map((l) => l.id);
+    [newOrder[settingsListIndex - 1], newOrder[settingsListIndex]] = [
+      newOrder[settingsListIndex],
+      newOrder[settingsListIndex - 1],
+    ];
+    reorderLists(newOrder);
+  };
+
+  const handleMoveListDown = () => {
+    if (
+      !settingsListId ||
+      settingsListIndex < 0 ||
+      settingsListIndex >= sortedListsForSettings.length - 1
+    )
+      return;
+    const newOrder = sortedListsForSettings.map((l) => l.id);
+    [newOrder[settingsListIndex], newOrder[settingsListIndex + 1]] = [
+      newOrder[settingsListIndex + 1],
+      newOrder[settingsListIndex],
+    ];
+    reorderLists(newOrder);
+  };
+
   const listIdsToRender = isWeb
     ? selectedListIds.length > 0
       ? selectedListIds
@@ -502,6 +541,20 @@ export default function TodoScreen() {
   useEffect(() => {
     if (!isWeb || selectedListIds.length > 0 || lists.length === 0) return;
     setSelectedLists([lists[0].id]);
+  }, [isWeb, lists, selectedListIds, setSelectedLists]);
+
+  // Keep selectedListIds sorted by list sortOrder (so panes match tab order)
+  useEffect(() => {
+    if (!isWeb || selectedListIds.length <= 1) return;
+    const sorted = [...selectedListIds].sort((a, b) => {
+      const listA = lists.find((l) => l.id === a);
+      const listB = lists.find((l) => l.id === b);
+      return (listA?.sortOrder ?? 0) - (listB?.sortOrder ?? 0);
+    });
+    const changed = sorted.some((id, i) => id !== selectedListIds[i]);
+    if (changed) {
+      setSelectedLists(sorted);
+    }
   }, [isWeb, lists, selectedListIds, setSelectedLists]);
 
   const listTaskData = useMemo(() => {
@@ -596,6 +649,7 @@ export default function TodoScreen() {
         onToggleList={toggleListSelection}
         onAddList={handleAddList}
         onOpenSettings={handleOpenSettings}
+        onReorderLists={reorderLists}
       />
 
       {/* New List Input (shown when creating) */}
@@ -824,6 +878,49 @@ export default function TodoScreen() {
                     trackColor={{ false: "#767577", true: "#3b82f6" }}
                   />
                 </View>
+
+                {/* List Position (accessibility fallback for drag reorder) */}
+                {sortedListsForSettings.length > 1 && (
+                  <View className="py-3 px-4 bg-surface-secondary rounded-lg mb-3 flex-row items-center justify-between">
+                    <Text className="text-[15px] font-semibold text-text">
+                      Position
+                    </Text>
+                    <View className="flex-row items-center gap-1">
+                      <Pressable
+                        className={`w-8 h-8 items-center justify-center rounded-md bg-border ${
+                          isSettingsListFirst ? "opacity-40" : ""
+                        }`}
+                        onPress={handleMoveListUp}
+                        disabled={isSettingsListFirst}
+                      >
+                        <Text
+                          className={`text-base font-semibold ${
+                            isSettingsListFirst
+                              ? "text-text-muted"
+                              : "text-text"
+                          }`}
+                        >
+                          ←
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        className={`w-8 h-8 items-center justify-center rounded-md bg-border ${
+                          isSettingsListLast ? "opacity-40" : ""
+                        }`}
+                        onPress={handleMoveListDown}
+                        disabled={isSettingsListLast}
+                      >
+                        <Text
+                          className={`text-base font-semibold ${
+                            isSettingsListLast ? "text-text-muted" : "text-text"
+                          }`}
+                        >
+                          →
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
 
                 {/* Categories Section */}
                 <View className="mb-4 pt-2 border-t border-border">
